@@ -60,8 +60,9 @@ yarn-error.log*
 .env.test
 .env.production
 
-# vercel
+# vercel & firebase
 .vercel
+.firebase/
 
 # typescript
 *.tsbuildinfo
