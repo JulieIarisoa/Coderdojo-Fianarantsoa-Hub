@@ -21,6 +21,9 @@ function formatRegisterError(err: unknown): string {
   if (code === "auth/operation-not-allowed") {
     return "L'inscription par e-mail n'est pas encore activée dans la console Firebase (Étape: Firebase Console -> Authentication -> Sign-in method). Utilisez le bouton 'Accès Rapide (Démo)' ci-dessous.";
   }
+  if (code === "auth/unauthorized-domain") {
+    return "Ce domaine de déploiement n'est pas autorisé dans votre console Firebase. (Allez dans Firebase Console -> Authentication -> Settings -> Domaines autorisés pour l'ajouter).";
+  }
   return msg || "Erreur lors de la création du compte.";
 }
 

@@ -22,7 +22,7 @@ function formatAuthError(err: unknown): string {
     return "La fenêtre de connexion Google a été fermée.";
   }
   if (code === "auth/unauthorized-domain") {
-    return "Le domaine localhost n'est pas autorisé dans votre console Firebase.";
+    return "Ce domaine de déploiement n'est pas autorisé dans votre console Firebase. (Allez dans Firebase Console -> Authentication -> Settings -> Domaines autorisés pour l'ajouter).";
   }
   return msg || "Erreur de connexion. Vérifiez vos identifiants ou utilisez l'accès démo.";
 }
