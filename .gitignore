@@ -16,22 +16,49 @@
 # next.js
 /.next/
 /out/
+/.turbo/
 
 # production
 /build
 
-# misc
+# misc & OS
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 *.pem
 
-# debug
+# IDEs & Editors
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+
+# Firebase logs
+firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*
+
+# debug logs
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# env files
+.env*.local
+.env
+.env.development
+.env.test
+.env.production
 
 # vercel
 .vercel
@@ -39,3 +66,4 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+

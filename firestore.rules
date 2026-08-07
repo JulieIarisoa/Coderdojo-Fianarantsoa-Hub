@@ -1,0 +1,76 @@
+rules_version = "2";
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isOwner(userId) { return signedIn() && request.auth.uid == userId; }
+    function isAdmin() { return signedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "ADMIN"; }
+    function changedOnly(fields) { return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields); }
+
+    match /users/{userId} {
+      allow read: if signedIn();
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isAdmin() || (isOwner(userId) && changedOnly(["name", "email", "avatar", "bio", "skills", "workshopsCount", "projectsCount", "studentsCount", "memoriesCount", "updatedAt"]));
+      allow delete: if isAdmin();
+    }
+
+    match /campfirePosts/{postId} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.authorId == request.auth.uid;
+      allow update: if isAdmin() || (signedIn() && changedOnly(["reactions", "likesCount", "commentsCount"])) || (signedIn() && resource.data.authorId == request.auth.uid && changedOnly(["content", "category", "linkPreview"]));
+      allow delete: if isAdmin() || (signedIn() && resource.data.authorId == request.auth.uid);
+      match /comments/{commentId} {
+        allow read: if signedIn();
+        allow create: if signedIn() && request.resource.data.authorId == request.auth.uid;
+        allow update, delete: if isAdmin() || (signedIn() && resource.data.authorId == request.auth.uid);
+      }
+    }
+
+    match /memories/{memoryId} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.authorId == request.auth.uid;
+      allow update: if isAdmin() || (signedIn() && changedOnly(["reactions", "likesCount", "commentsCount"])) || (signedIn() && resource.data.authorId == request.auth.uid && changedOnly(["title", "description", "imageUrl", "images", "cloudinaryId", "eventDate"]));
+      allow delete: if isAdmin() || (signedIn() && resource.data.authorId == request.auth.uid);
+      match /comments/{commentId} {
+        allow read: if signedIn();
+        allow create: if signedIn() && request.resource.data.authorId == request.auth.uid;
+        allow update, delete: if isAdmin() || (signedIn() && resource.data.authorId == request.auth.uid);
+      }
+    }
+
+    match /secretFriendCampaigns/{campaignId} { allow read: if signedIn(); allow write: if isAdmin(); }
+    match /secretFriendAssignments/{assignmentId} {
+      allow read: if isAdmin() || (signedIn() && resource.data.mentorId == request.auth.uid);
+      allow update: if isAdmin() || (signedIn() && resource.data.mentorId == request.auth.uid && changedOnly(["actionJournal", "completed"]));
+      allow create, delete: if isAdmin();
+    }
+
+    match /guessWhoGames/{gameId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+      match /votes/{voteId} {
+        allow read: if signedIn();
+        allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+        allow update, delete: if isAdmin();
+      }
+    }
+
+    match /dailyQuestions/{questionId} { allow read: if signedIn(); allow write: if isAdmin(); }
+    match /badges/{badgeId} { allow read: if signedIn(); allow write: if isAdmin(); }
+    match /milestones/{milestoneId} { allow read: if signedIn(); allow write: if isAdmin(); }
+
+    match /notifications/{notificationId} {
+      allow read: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isAdmin();
+      allow update: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid && changedOnly(["read"]));
+      allow delete: if isAdmin();
+    }
+
+    match /directMessages/{messageId} {
+      allow read: if signedIn() && (resource.data.fromId == request.auth.uid || resource.data.toId == request.auth.uid);
+      allow create: if signedIn() && request.resource.data.fromId == request.auth.uid;
+      allow update: if isAdmin() || (signedIn() && resource.data.toId == request.auth.uid && changedOnly(["read"]));
+      allow delete: if isAdmin();
+    }
+  }
+}

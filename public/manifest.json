@@ -1,0 +1,33 @@
+{
+  "name": "CoderDojo Fianarantsoa Hub",
+  "short_name": "CoderDojo Hub",
+  "description": "Plateforme communautaire privée pour les mentors de CoderDojo Fianarantsoa",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#fcf8ff",
+  "theme_color": "#330075",
+  "scope": "/",
+  "lang": "fr",
+  "categories": ["education", "productivity"],
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
