@@ -10,7 +10,8 @@ Plateforme web de la communauté **Coderdojo Fianarantsoa**, développée en Nex
 
 Ce projet est géré en **Agile Kanban via Trello** avec un pipeline **CI/CD GitHub Actions**.
 
-> 📖 **Guides pour l'équipe :**
+> 📖 **Guides & Règlement pour l'équipe :**
+> - **[Charte & Règlement de l'Équipe (TEAM_RULES.md)](TEAM_RULES.md)** : Les 6 règles d'or obligatoires pour tous les développeurs.
 > - **[Guide Méthodologique Kanban avec Trello (KANBAN_GUIDE.md)](KANBAN_GUIDE.md)** : Structure des colonnes, règles Trello et Git Flow.
 > - **[Guide des Normes de Commit (COMMIT_CONVENTIONS.md)](COMMIT_CONVENTIONS.md)** : Standard Conventional Commits (`feat:`, `fix:`, `docs:`, etc.).
 
