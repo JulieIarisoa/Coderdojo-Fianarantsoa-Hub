@@ -61,23 +61,9 @@ git push origin feat/secret-friend-timer
 
 ## 💬 4. Conventions de Commit (Conventional Commits)
 
-Format obligatoire pour chaque commit :
+Chaque message de commit doit respecter le format standardisé **Conventional Commits**.
 
-`<type>(<scope optionnel>): <description courte en minuscules>`
-
-### Types autorisés :
-- `feat`: Nouvelle fonctionnalité utilisateur
-- `fix`: Correction d'un bug
-- `docs`: Documentation
-- `style`: Formatage, correction d'espacement (sans changement logique)
-- `refactor`: Refactoring du code
-- `test`: Ajout / modification de tests
-- `chore`: Configuration, dépendances, scripts
-
-**Exemples :**
-- `feat(admin): ajout du bouton de tirage Secret Friend`
-- `fix(auth): résolution du problème de reconnexion Firebase`
-- `chore(trello): mise à jour du guide Kanban`
+> 📖 **[Consulter le Guide complet des Normes de Commit (COMMIT_CONVENTIONS.md)](COMMIT_CONVENTIONS.md)** pour voir tous les types (`feat`, `fix`, `docs`, `refactor`, `style`, `chore`, `ci`), les scopes recommandés du projet et des exemples concrets.
 
 ---
 

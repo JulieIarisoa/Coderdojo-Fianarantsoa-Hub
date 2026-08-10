@@ -10,12 +10,9 @@ Plateforme web de la communauté **Coderdojo Fianarantsoa**, développée en Nex
 
 Ce projet est géré en **Agile Kanban via Trello** avec un pipeline **CI/CD GitHub Actions**.
 
-> 📖 **[Consulter le Guide Méthodologique Kanban avec Trello (KANBAN_GUIDE.md)](KANBAN_GUIDE.md)** pour connaître :
-> - La structure des colonnes Trello (`Backlog`, `Ready`, `In Progress`, `In Review`, `Done`)
-> - L'intégration du Power-Up GitHub sur Trello
-> - La stratégie de branches (GitHub Flow)
-> - Les conventions de commit (`feat:`, `fix:`, `chore:`, etc.)
-> - La Definition of Done (DoD) & le processus de Code Review
+> 📖 **Guides pour l'équipe :**
+> - **[Guide Méthodologique Kanban avec Trello (KANBAN_GUIDE.md)](KANBAN_GUIDE.md)** : Structure des colonnes, règles Trello et Git Flow.
+> - **[Guide des Normes de Commit (COMMIT_CONVENTIONS.md)](COMMIT_CONVENTIONS.md)** : Standard Conventional Commits (`feat:`, `fix:`, `docs:`, etc.).
 
 ---
 
