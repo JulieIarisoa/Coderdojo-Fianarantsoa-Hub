@@ -1,0 +1,56 @@
+name: 🚀 Nouvelle Fonctionnalité (User Story)
+description: Proposer une nouvelle fonctionnalité ou amélioration pour le projet Coderdojo Hub.
+title: "[FEAT]: "
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Merci d'utiliser cette trame Agile pour définir la fonctionalité sous forme de **User Story**.
+
+  - type: textarea
+    id: user-story
+    attributes:
+      label: 👤 User Story (En tant que... Je veux... Afin de...)
+      description: Définissez le besoin de l'utilisateur.
+      placeholder: |
+        - **En tant que** : Mentor Coderdojo
+        - **Je veux** : Pouvoir assigner une tâche Secret Friend à un participant
+        - **Afin de** : Préparer l'animation de l'atelier de manière automatisée.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: ✅ Critères d'acceptation (Definition of Done)
+      description: Liste des critères vérifiables pour considérer la fonctionnalité comme terminée.
+      placeholder: |
+        - [ ] Le bouton d'attribution est visible sur la page Admin
+        - [ ] Un tirage au sort aléatoire est généré en base Firestore
+        - [ ] Un message de confirmation s'affiche avec la notification Toast
+    validations:
+      required: true
+
+  - type: textarea
+    id: technical-notes
+    attributes:
+      label: 🛠️ Notes Techniques / Composants impactés
+      description: Mentionnez les pages, composants React, hooks ou règles Firestore concernés.
+      placeholder: |
+        - Page: `src/app/(app)/secret-friend/page.tsx`
+        - Hook: `src/hooks/useSecretFriend.ts`
+        - Collections Firestore: `secret_friends`, `users`
+    validations:
+      required: false
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 🎯 Priorité estimée
+      options:
+        - Haute (Urgent / Core feature)
+        - Moyenne (Fonctionnalité standard)
+        - Basse (Nice to have / Amélioration mineure)
+    validations:
+      required: true

@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Discussion / Idée informelle
+    url: https://github.com/Tanguy1902/Coderdojo-Fianarantsoa-Hub/discussions
+    about: Pour échanger des idées sans créer d'Issue formelle sur le Kanban.

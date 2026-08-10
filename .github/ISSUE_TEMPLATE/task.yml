@@ -1,0 +1,24 @@
+name: 🔧 Tâche Technique / Refactoring
+description: Tâche de maintenance, refactoring, mise à niveau de dépendances ou infrastructure.
+title: "[TASK]: "
+labels: ["chore", "technical-debt"]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: 🎯 Objectif de la tâche
+      description: Expliquez ce qui doit être fait et pourquoi.
+      placeholder: Mettre à jour les règles Firestore et ajouter la validation TypeScript sur les rôles admin.
+    validations:
+      required: true
+
+  - type: textarea
+    id: checklist
+    attributes:
+      label: 📋 Liste de contrôle (Checklist)
+      placeholder: |
+        - [ ] Mettre à jour `firestore.rules`
+        - [ ] Ajuster les types dans `src/types/index.ts`
+        - [ ] Exécuter `npm run validate`
+    validations:
+      required: true
