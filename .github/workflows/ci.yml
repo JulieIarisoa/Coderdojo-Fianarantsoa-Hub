@@ -30,6 +30,9 @@ jobs:
       - name: Vérification du Linting (ESLint)
         run: npm run lint
 
+      - name: Exécution des tests unitaires (Vitest)
+        run: npm test
+
       - name: Test de Build Next.js
         run: npm run build
         env:
