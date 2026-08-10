@@ -45,6 +45,33 @@ service cloud.firestore {
       allow create, delete: if isAdmin();
     }
 
+    function assignmentForMessage(message) {
+      return get(/databases/$(database)/documents/secretFriendAssignments/$(message.assignmentId)).data;
+    }
+
+    function isSecretFriendMessageParticipant(message) {
+      let assignment = assignmentForMessage(message);
+      return signedIn() &&
+        (assignment.mentorId == request.auth.uid || assignment.secretFriendId == request.auth.uid) &&
+        (message.senderId == request.auth.uid || message.recipientId == request.auth.uid);
+    }
+
+    match /secretFriendMessages/{messageId} {
+      allow read: if isAdmin() || isSecretFriendMessageParticipant(resource.data);
+      allow create: if signedIn() &&
+        request.resource.data.senderId == request.auth.uid &&
+        request.resource.data.recipientId != request.auth.uid &&
+        request.resource.data.read == false &&
+        assignmentForMessage(request.resource.data).campaignId == request.resource.data.campaignId &&
+        ((assignmentForMessage(request.resource.data).mentorId == request.auth.uid &&
+          request.resource.data.recipientId == assignmentForMessage(request.resource.data).secretFriendId) ||
+         (assignmentForMessage(request.resource.data).secretFriendId == request.auth.uid &&
+          request.resource.data.recipientId == assignmentForMessage(request.resource.data).mentorId));
+      allow update: if isAdmin() ||
+        (signedIn() && resource.data.recipientId == request.auth.uid && changedOnly(["read"]));
+      allow delete: if isAdmin();
+    }
+
     match /guessWhoGames/{gameId} {
       allow read: if signedIn();
       allow write: if isAdmin();

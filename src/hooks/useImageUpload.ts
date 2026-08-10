@@ -23,24 +23,37 @@ export function useImageUpload() {
         method: "POST",
         body: formData,
       });
-      const data = await response.json();
 
-      if (!response.ok || !data.url) {
-        throw new Error(data.error || "L'image n'a pas pu être envoyée.");
+      if (response.ok) {
+        const data = await response.json();
+        if (data.url) {
+          return { url: data.url, cloudinaryId: data.cloudinaryId };
+        }
       }
 
-      return {
-        url: data.url,
-        cloudinaryId: data.cloudinaryId,
-      };
-    } catch (uploadError) {
-      const message =
-        uploadError instanceof Error
-          ? uploadError.message
-          : "Erreur lors de l'envoi de l'image.";
-      setError(message);
-      console.error("Image upload failed", uploadError);
-      return null;
+      // Fallback for static hosting: Convert file to Data URL
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          resolve({ url: reader.result as string });
+        };
+        reader.onerror = () => {
+          resolve(null);
+        };
+        reader.readAsDataURL(file);
+      });
+    } catch {
+      // Fallback for static hosting
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          resolve({ url: reader.result as string });
+        };
+        reader.onerror = () => {
+          resolve(null);
+        };
+        reader.readAsDataURL(file);
+      });
     } finally {
       setIsUploading(false);
     }

@@ -73,6 +73,7 @@ export interface SecretFriendCampaign {
   id: string;
   title: string;
   season: string;
+  instruction?: string;
   status: 'draft' | 'active' | 'completed';
   revealDaysLeft: number;
   createdAt: unknown;
@@ -94,6 +95,19 @@ export interface SecretFriendAssignment {
     timeAgo: string;
     icon: string;
   }[];
+}
+
+export interface SecretFriendMessage {
+  id: string;
+  campaignId: string;
+  assignmentId: string;
+  senderId: string;
+  recipientId: string;
+  text: string;
+  imageUrl?: string;
+  replyToId?: string;
+  read: boolean;
+  createdAt: unknown;
 }
 
 export interface GuessWhoGame {

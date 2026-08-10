@@ -1,13 +1,17 @@
 "use client";
 
+import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/providers/AuthProvider";
 import { MOCK_SECRET_FRIEND } from "@/lib/mockData";
-import { SecretFriendAssignment } from "@/types";
+import { SecretFriendAssignment, SecretFriendMessage } from "@/types";
 import {
   subscribeToSecretFriendAssignment,
-  addSecretFriendJournalEntry,
-} from "@/lib/firebase/secretFriend";
+  subscribeToSecretFriendMessages,
+  createSecretFriendMessage,
+  markSecretFriendMessageRead,
+} from "@/lib/firebase/firestore";
+import { useImageUpload } from "@/hooks/useImageUpload";
 import {
   Gift,
   Clock,
@@ -19,6 +23,8 @@ import {
   Coffee,
   Mail,
   Sparkles,
+  ImagePlus,
+  Reply,
 } from "lucide-react";
 
 const ICON_MAP: Record<string, React.ReactNode> = {
@@ -32,47 +38,101 @@ export default function SecretFriendPage() {
   const [assignment, setAssignment] = useState<SecretFriendAssignment>(MOCK_SECRET_FRIEND);
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [secretMessage, setSecretMessage] = useState("");
+  const [messageImage, setMessageImage] = useState<File | null>(null);
+  const [replyTo, setReplyTo] = useState<SecretFriendMessage | null>(null);
+  const [messages, setMessages] = useState<SecretFriendMessage[]>([]);
   const [messageSent, setMessageSent] = useState(false);
+  const [messageError, setMessageError] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+  const { uploadImage, isUploading } = useImageUpload();
 
   useEffect(() => {
     if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || !user) return;
 
-    const unsub = subscribeToSecretFriendAssignment(user.id, (a) => {
-      if (a) setAssignment(a);
+    const unsubAssignment = subscribeToSecretFriendAssignment(user.id, (a) => {
+      if (a) {
+        setAssignment({
+          ...a,
+          actionJournal: a.actionJournal || [],
+        });
+      }
     });
 
-    return () => unsub();
+    const unsubMessages = subscribeToSecretFriendMessages(user.id, setMessages);
+
+    return () => {
+      unsubAssignment?.();
+      unsubMessages?.();
+    };
   }, [user]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!secretMessage.trim()) return;
+    if ((!secretMessage.trim() && !messageImage) || !user || !assignment.id) return;
 
-    if (process.env.NEXT_PUBLIC_FIREBASE_API_KEY && assignment.id) {
-      await addSecretFriendJournalEntry(assignment.id, {
-        actionText: `Message anonyme envoyé: "${secretMessage}"`,
-        icon: "mark_email_read",
-      });
-    } else {
-      const newJournalItem = {
-        id: `act-${Date.now()}`,
-        actionText: `Message anonyme envoyé: "${secretMessage}"`,
-        timeAgo: "À l'instant",
-        icon: "mark_email_read",
+    setSending(true);
+    setMessageError(null);
+
+    try {
+      let imageUrl: string | undefined;
+      if (messageImage) {
+        const uploaded = await uploadImage(messageImage);
+        if (!uploaded?.url) throw new Error("L'image n'a pas pu être envoyée.");
+        imageUrl = uploaded.url;
+      }
+
+      const newMessage = {
+        campaignId: assignment.campaignId,
+        assignmentId: assignment.id,
+        senderId: user.id,
+        recipientId: replyTo?.senderId || assignment.secretFriendId,
+        text: secretMessage.trim(),
+        ...(imageUrl ? { imageUrl } : {}),
+        ...(replyTo ? { replyToId: replyTo.id } : {}),
       };
-      setAssignment({
-        ...assignment,
-        actionJournal: [newJournalItem, ...assignment.actionJournal],
-      });
-    }
 
-    setMessageSent(true);
-    setTimeout(() => {
-      setMessageSent(false);
-      setShowMessageModal(false);
-      setSecretMessage("");
-    }, 1500);
+      if (process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
+        await createSecretFriendMessage(newMessage);
+      } else {
+        setMessages((current) => [
+          {
+            ...newMessage,
+            id: `local-${Date.now()}`,
+            read: false,
+            createdAt: new Date().toISOString(),
+          },
+          ...current,
+        ]);
+      }
+
+      setMessageSent(true);
+      setTimeout(() => {
+        setMessageSent(false);
+        setShowMessageModal(false);
+        setSecretMessage("");
+        setMessageImage(null);
+        setReplyTo(null);
+      }, 1200);
+    } catch (error: unknown) {
+      setMessageError(error instanceof Error ? error.message : "Le message n'a pas pu être envoyé.");
+    } finally {
+      setSending(false);
+    }
   };
+
+  const openReply = async (message: SecretFriendMessage) => {
+    setReplyTo(message);
+    setSecretMessage("");
+    setMessageImage(null);
+    setMessageError(null);
+    setShowMessageModal(true);
+    if (!message.read && process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
+      await markSecretFriendMessageRead(message.id);
+    }
+  };
+
+  const activeMessages = messages.filter((message) => message.assignmentId === assignment.id);
+  const receivedMessages = activeMessages.filter((message) => message.recipientId === user?.id);
 
   return (
     <div className="flex flex-col gap-6">
@@ -135,13 +195,100 @@ export default function SecretFriendPage() {
           </div>
 
           <button
-            onClick={() => setShowMessageModal(true)}
+            onClick={() => {
+              setReplyTo(null);
+              setMessageError(null);
+              setShowMessageModal(true);
+            }}
             className="w-full bg-primary hover:bg-surface-tint text-on-primary font-mono text-sm font-semibold py-3.5 px-6 rounded-xl shadow-md transition-all text-center flex items-center justify-center gap-2"
           >
             <Send className="w-4 h-4" />
-            Envoyer un message
+            Écrire anonymement
           </button>
         </div>
+      </div>
+
+      {/* Anonymous conversation */}
+      <div className="bg-surface rounded-2xl p-gutter card-shadow border border-outline-variant/30">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+          <div>
+            <h3 className="font-headline text-xl font-bold text-on-surface flex items-center gap-2">
+              <Mail className="w-5 h-5 text-primary" />
+              Boîte secrète
+            </h3>
+            <p className="font-body text-sm text-on-surface-variant mt-1">
+              Les messages sont anonymes. Tu peux répondre sans révéler ton identité.
+            </p>
+          </div>
+          {receivedMessages.some((message) => !message.read) && (
+            <span className="bg-primary-container/30 text-primary font-mono text-xs font-bold px-3 py-1.5 rounded-full">
+              Nouveau message
+            </span>
+          )}
+        </div>
+
+        {activeMessages.length === 0 ? (
+          <div className="py-8 text-center bg-surface-container-low rounded-xl border border-dashed border-outline-variant/40">
+            <Mail className="w-8 h-8 text-primary/60 mx-auto mb-2" />
+            <p className="font-body text-sm text-on-surface-variant">
+              Aucun message secret pour le moment.
+            </p>
+            <p className="font-mono text-xs text-on-surface-variant/80 mt-1">
+              Sois le premier à écrire anonymement.
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {activeMessages.map((message) => {
+              const received = message.recipientId === user?.id;
+              return (
+                <div
+                  key={message.id}
+                  className={`rounded-xl border p-4 ${
+                    received
+                      ? "bg-primary-container/10 border-primary/20"
+                      : "bg-surface-container-low border-outline-variant/30"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-primary">
+                      {received ? "Message anonyme reçu" : "Message envoyé anonymement"}
+                    </span>
+                    {received && !message.read && (
+                      <span className="font-mono text-[10px] font-bold text-primary">Nouveau</span>
+                    )}
+                  </div>
+                  {message.text && (
+                    <p className="font-body text-sm text-on-surface whitespace-pre-wrap">
+                      {message.text}
+                    </p>
+                  )}
+                  {message.imageUrl && (
+                    <div className="relative mt-3 h-56 w-full overflow-hidden rounded-xl bg-surface-container-high">
+                      <Image
+                        src={message.imageUrl}
+                        alt="Image envoyée anonymement"
+                        fill
+                        unoptimized
+                        className="object-contain"
+                      />
+                    </div>
+                  )}
+                  {received && (
+                    <button
+                      type="button"
+                      onClick={() => openReply(message)}
+                      className="mt-4 bg-primary text-on-primary font-mono text-xs font-semibold px-4 py-2 rounded-full flex items-center gap-1.5"
+                    >
+                      <Reply className="w-3.5 h-3.5" />
+                      Répondre anonymement
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Action Journal Section */}
@@ -151,7 +298,7 @@ export default function SecretFriendPage() {
         </h3>
 
         <div className="flex flex-col gap-6 relative before:absolute before:left-5 before:top-3 before:bottom-3 before:w-0.5 before:bg-outline-variant/30">
-          {assignment.actionJournal.map((act) => (
+          {(assignment.actionJournal || []).map((act) => (
             <div key={act.id} className="flex items-start gap-4 relative z-10">
               <div className="w-10 h-10 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center shrink-0 shadow-sm">
                 {ICON_MAP[act.icon] || <Gift className="w-5 h-5" />}
@@ -176,9 +323,9 @@ export default function SecretFriendPage() {
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-headline text-lg font-bold text-on-surface flex items-center gap-2">
                 <Mail className="w-5 h-5 text-primary" />
-                Envoyer un message anonyme
+                {replyTo ? "Répondre anonymement" : "Nouveau message anonyme"}
               </h3>
-              <button onClick={() => setShowMessageModal(false)} className="text-on-surface-variant hover:text-on-surface">
+              <button type="button" onClick={() => setShowMessageModal(false)} className="text-on-surface-variant hover:text-on-surface">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -192,12 +339,30 @@ export default function SecretFriendPage() {
               <form onSubmit={handleSendMessage} className="flex flex-col gap-4">
                 <textarea
                   rows={4}
-                  required
                   value={secretMessage}
                   onChange={(e) => setSecretMessage(e.target.value)}
-                  placeholder="Écris ton mot d'encouragement anonyme ici..."
+                  placeholder={replyTo ? "Écris ta réponse anonyme..." : "Écris ton message anonyme..."}
                   className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl p-3 text-on-surface font-body resize-none focus:outline-none focus:ring-2 focus:ring-primary"
                 />
+
+                <label className="flex items-center gap-2 border border-dashed border-outline-variant/50 rounded-xl px-4 py-3 text-on-surface-variant hover:border-primary hover:text-primary cursor-pointer transition-colors">
+                  <ImagePlus className="w-5 h-5" />
+                  <span className="font-mono text-xs truncate">
+                    {messageImage ? messageImage.name : "Ajouter une image (facultatif)"}
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="sr-only"
+                    onChange={(event) => setMessageImage(event.target.files?.[0] || null)}
+                  />
+                </label>
+
+                {messageError && (
+                  <p className="font-mono text-xs text-error" role="alert">
+                    {messageError}
+                  </p>
+                )}
 
                 <div className="flex justify-end gap-3">
                   <button
@@ -209,10 +374,11 @@ export default function SecretFriendPage() {
                   </button>
                   <button
                     type="submit"
-                    className="bg-primary text-on-primary font-mono text-xs font-semibold px-6 py-2 rounded-full flex items-center gap-1.5"
+                    disabled={sending || isUploading || (!secretMessage.trim() && !messageImage)}
+                    className="bg-primary text-on-primary font-mono text-xs font-semibold px-6 py-2 rounded-full flex items-center gap-1.5 disabled:opacity-40"
                   >
                     <Send className="w-3.5 h-3.5" />
-                    Envoyer
+                    {sending || isUploading ? "Envoi..." : "Envoyer"}
                   </button>
                 </div>
               </form>

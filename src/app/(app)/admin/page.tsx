@@ -8,9 +8,9 @@ import {
   subscribeToAllMentors,
   updateUserProfile,
   updateUserStatus,
+  createSecretFriendCampaign,
 } from "@/lib/firebase/firestore";
 import { subscribeToCampfirePosts, deleteCampfirePost } from "@/lib/firebase/community";
-import { createSecretFriendCampaign } from "@/lib/firebase/secretFriend";
 import { createGuessWhoGame } from "@/lib/firebase/gamification";
 import { CampfirePost, UserProfile } from "@/types";
 import { MOCK_MENTORS, MOCK_POSTS } from "@/lib/mockData";
@@ -182,6 +182,14 @@ export default function AdminPage() {
     }
 
     const campaignId = "camp-" + Date.now();
+    const campaign = {
+      id: campaignId,
+      title: campaignTitle,
+      season: new Date().getFullYear().toString(),
+      instruction: campaignDesc,
+      status: "active" as const,
+      revealDaysLeft: 30,
+    };
     const assignments = mentorsList.map((mentor, index) => {
       const pairedMentor = mentorsList[(index + 1) % mentorsList.length];
       return {
@@ -199,7 +207,7 @@ export default function AdminPage() {
 
     try {
       if (process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
-        await createSecretFriendCampaign(assignments);
+        await createSecretFriendCampaign(campaign, assignments);
       }
 
       setSecretFriendSuccess(true);

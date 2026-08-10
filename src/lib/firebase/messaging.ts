@@ -41,10 +41,22 @@ export async function sendDirectMessage(message: {
   }
 }
 
+function handleSnapshotError(err: unknown, source: string) {
+  const code = (err as { code?: string })?.code;
+  if (code === "permission-denied") {
+    console.warn(
+      `[Firestore Permission Warning] ${source}: Insufficient permissions or unauthenticated session.`
+    );
+  } else {
+    console.error(`[Firestore Error] ${source}:`, err);
+  }
+}
+
 export function subscribeToReceivedMessages(
   userId: string,
   callback: (messages: DirectMessage[]) => void
 ) {
+  if (!userId) return () => {};
   const messagesRef = collection(db, "directMessages");
   const messagesQuery = query(messagesRef, where("toId", "==", userId));
 
@@ -57,6 +69,6 @@ export function subscribeToReceivedMessages(
       })) as DirectMessage[];
       callback(messages);
     },
-    (error) => console.error("[Firestore Error] subscribeToReceivedMessages:", error)
+    (error) => handleSnapshotError(error, "subscribeToReceivedMessages")
   );
 }
