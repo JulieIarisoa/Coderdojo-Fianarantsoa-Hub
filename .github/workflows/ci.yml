@@ -1,0 +1,44 @@
+name: Integration Continue (CI)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate:
+    name: Typecheck, Lint & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      - name: Configuration de Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Installation des dépendances
+        run: npm install
+
+      - name: Vérification des types TypeScript
+        run: npm run typecheck
+
+      - name: Vérification du Linting (ESLint)
+        run: npm run lint
+
+      - name: Exécution des tests unitaires (Vitest)
+        run: npm test
+
+      - name: Test de Build Next.js
+        run: npm run build
+        env:
+          NEXT_PUBLIC_FIREBASE_API_KEY: "dummy-key-for-ci-build"
+          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: "coderdojo-fianarantsoa-hub.firebaseapp.com"
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID: "coderdojo-fianarantsoa-hub"
+          NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: "coderdojo-fianarantsoa-hub.firebasestorage.app"
+          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: "301482645665"
+          NEXT_PUBLIC_FIREBASE_APP_ID: "1:301482645665:web:64d11917b14ba8f2bef8e0"

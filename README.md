@@ -1,36 +1,52 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🇲🇬 Coderdojo Fianarantsoa Hub
 
-## Getting Started
+[![CI Status](https://github.com/Tanguy1902/Coderdojo-Fianarantsoa-Hub/actions/workflows/ci.yml/badge.svg)](https://github.com/Tanguy1902/Coderdojo-Fianarantsoa-Hub/actions/workflows/ci.yml)
 
-First, run the development server:
+Plateforme web de la communauté **Coderdojo Fianarantsoa**, développée en Next.js (App Router), Tailwind CSS et Firebase.
 
+---
+
+## 👥 Travail d'Équipe & Méthodologie Agile (Kanban sur Trello)
+
+Ce projet est géré en **Agile Kanban via Trello** avec un pipeline **CI/CD GitHub Actions**.
+
+> 📖 **Guides & Règlement pour l'équipe :**
+> - **[Charte & Règlement de l'Équipe (TEAM_RULES.md)](TEAM_RULES.md)** : Les 6 règles d'or obligatoires pour tous les développeurs.
+> - **[Guide Méthodologique Kanban avec Trello (KANBAN_GUIDE.md)](KANBAN_GUIDE.md)** : Structure des colonnes, règles Trello et Git Flow.
+> - **[Guide des Normes de Commit (COMMIT_CONVENTIONS.md)](COMMIT_CONVENTIONS.md)** : Standard Conventional Commits (`feat:`, `fix:`, `docs:`, etc.).
+
+---
+
+## 🚀 Démarrage Rapide
+
+### 1. Installation des dépendances
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Lancement du serveur de développement
+```bash
+npm run dev
+```
+Ouvrez [http://localhost:3000](http://localhost:3000) dans votre navigateur.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🧪 Validation & Qualité du Code
 
-## Learn More
+Avant d'ouvrir une Pull Request, assurez-vous d'exécuter la commande de validation locale :
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm run validate
+```
+Cette commande exécute le typage TypeScript (`tsc --noEmit`) ainsi que le linter ESLint (`eslint`).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🛠️ Scripts disponibles
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `npm run dev` : Lance l'environnement de développement local.
+- `npm run build` : Compile l'application pour la production.
+- `npm run typecheck` : Vérifie la validité des types TypeScript.
+- `npm run lint` : Analyse le code avec ESLint.
+- `npm run validate` : Exécute le typecheck et le linting combinés.

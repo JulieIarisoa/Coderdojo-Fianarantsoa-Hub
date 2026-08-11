@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useState } from "react";
 import { useAuth } from "@/providers/AuthProvider";
 import { useImageUpload } from "@/hooks/useImageUpload";
@@ -14,6 +15,7 @@ import {
   CloudUpload,
   Upload,
   CheckCircle2,
+  ShieldCheck,
 } from "lucide-react";
 
 export default function SettingsPage() {
@@ -57,13 +59,24 @@ export default function SettingsPage() {
 
   return (
     <div className="flex flex-col gap-6 max-w-2xl">
-      <div>
-        <h1 className="font-headline text-3xl font-bold text-on-surface">
-          Paramètres du profil
-        </h1>
-        <p className="font-body text-on-surface-variant text-sm mt-1">
-          Gère tes informations personnelles et tes préférences.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="font-headline text-3xl font-bold text-on-surface">
+            Paramètres du profil
+          </h1>
+          <p className="font-body text-on-surface-variant text-sm mt-1">
+            Gère tes informations personnelles et tes préférences.
+          </p>
+        </div>
+        {user?.role === "ADMIN" && (
+          <Link
+            href="/admin"
+            className="bg-primary-container text-on-primary-container hover:bg-primary/10 font-mono text-xs font-bold px-4 py-2 rounded-full transition-all flex items-center gap-2 border border-primary/30 shadow-sm w-fit"
+          >
+            <ShieldCheck className="w-4 h-4 text-primary" />
+            Accéder à l&apos;espace Admin
+          </Link>
+        )}
       </div>
 
       <div className="bg-surface rounded-2xl p-6 card-shadow border border-outline-variant/30">
@@ -96,7 +109,7 @@ export default function SettingsPage() {
           </div>
 
           <div>
-            <label className="block font-mono text-xs uppercase font-semibold text-on-surface mb-2 flex items-center gap-1.5">
+            <label className="font-mono text-xs uppercase font-semibold text-on-surface mb-2 flex items-center gap-1.5">
               <User className="w-4 h-4" />
               Nom complet
             </label>
@@ -109,7 +122,7 @@ export default function SettingsPage() {
           </div>
 
           <div>
-            <label className="block font-mono text-xs uppercase font-semibold text-on-surface mb-2 flex items-center gap-1.5">
+            <label className="font-mono text-xs uppercase font-semibold text-on-surface mb-2 flex items-center gap-1.5">
               <FileText className="w-4 h-4" />
               Biographie / Description
             </label>
@@ -122,7 +135,7 @@ export default function SettingsPage() {
           </div>
 
           <div>
-            <label className="block font-mono text-xs uppercase font-semibold text-on-surface mb-2 flex items-center gap-1.5">
+            <label className="font-mono text-xs uppercase font-semibold text-on-surface mb-2 flex items-center gap-1.5">
               <Mail className="w-4 h-4" />
               Email
             </label>
@@ -135,14 +148,26 @@ export default function SettingsPage() {
           </div>
 
           <div className="flex flex-col sm:flex-row justify-between items-center pt-4 border-t border-outline-variant/20 gap-4">
-            <button
-              type="button"
-              onClick={() => logout()}
-              className="text-error font-mono text-xs font-bold hover:underline flex items-center gap-1.5"
-            >
-              <LogOut className="w-4 h-4" />
-              Se déconnecter
-            </button>
+            <div className="flex items-center gap-3 flex-wrap">
+              <button
+                type="button"
+                onClick={() => logout()}
+                className="text-error font-mono text-xs font-bold hover:underline flex items-center gap-1.5"
+              >
+                <LogOut className="w-4 h-4" />
+                Se déconnecter
+              </button>
+
+              {user?.role === "ADMIN" && (
+                <Link
+                  href="/admin"
+                  className="bg-primary-container text-on-primary-container hover:bg-primary/10 font-mono text-xs font-bold px-3.5 py-2 rounded-full transition-all flex items-center gap-1.5 border border-primary/30"
+                >
+                  <ShieldCheck className="w-4 h-4 text-primary" />
+                  Espace Admin
+                </Link>
+              )}
+            </div>
 
             <button
               type="submit"
