@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/providers/AuthProvider";
 import { cn } from "@/lib/utils/cn";
 import {
   LayoutDashboard,
@@ -13,6 +14,7 @@ import {
   UserSearch,
   Trophy,
   Settings,
+  ShieldCheck,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -34,6 +36,7 @@ const navItems: NavItem[] = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { user } = useAuth();
 
   return (
     <nav className="hidden lg:flex flex-col h-full border-r border-outline-variant/40 bg-surface-container-lowest shadow-[16px_0_32px_-10px_rgba(75,31,147,0.06)] w-60 fixed left-0 top-0 z-50">
@@ -69,6 +72,23 @@ export function Sidebar() {
               </li>
             );
           })}
+
+          {user?.role === "ADMIN" && (
+            <li>
+              <Link
+                href="/admin"
+                className={cn(
+                  "flex items-center gap-3 px-4 py-3 font-label-md text-label-md transition-all duration-200 rounded-r-full border-l-4",
+                  pathname === "/admin" || pathname?.startsWith("/admin")
+                    ? "bg-primary-container text-primary border-primary font-bold shadow-sm"
+                    : "text-primary hover:bg-surface-container-high border-transparent font-semibold"
+                )}
+              >
+                <ShieldCheck className="w-5 h-5" />
+                <span>Espace Admin</span>
+              </Link>
+            </li>
+          )}
         </ul>
       </div>
 
