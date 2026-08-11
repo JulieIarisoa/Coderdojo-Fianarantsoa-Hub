@@ -64,3 +64,45 @@ export const directMessageSchema = z.object({
   toName: z.string().trim().min(1).max(100),
   content: z.string().trim().min(1).max(2000),
 });
+
+export const registerSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(2, { message: "Le nom complet doit contenir au moins 2 caractères." })
+    .max(80, { message: "Le nom complet ne doit pas dépasser 80 caractères." }),
+  email: z
+    .string()
+    .trim()
+    .min(1, { message: "L'adresse e-mail est obligatoire." })
+    .email({ message: "Saisissez une adresse e-mail valide." }),
+  password: z
+    .string()
+    .min(6, { message: "Le mot de passe doit contenir au moins 6 caractères." })
+    .max(100, { message: "Le mot de passe ne doit pas dépasser 100 caractères." }),
+});
+
+export const campfireComposerSchema = z.object({
+  content: z
+    .string()
+    .trim()
+    .min(1, { message: "Écrivez votre message avant de publier." })
+    .max(5000, { message: "Le message ne doit pas dépasser 5000 caractères." }),
+  category: z.enum(["idea", "fun", "teaching", "project"]),
+});
+
+export const memoryFormSchema = z.object({
+  title: z
+    .string()
+    .trim()
+    .min(1, { message: "Le titre du souvenir est obligatoire." })
+    .max(160, { message: "Le titre ne doit pas dépasser 160 caractères." }),
+  description: z
+    .string()
+    .max(5000, { message: "La description ne doit pas dépasser 5000 caractères." }),
+  eventDate: z
+    .string()
+    .trim()
+    .min(1, { message: "Indiquez le mois et l'année du souvenir." })
+    .max(40, { message: "La date ne doit pas dépasser 40 caractères." }),
+});

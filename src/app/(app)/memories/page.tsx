@@ -3,12 +3,16 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { z } from "zod";
+import { FormProvider, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "@/providers/AuthProvider";
 import { useImageUpload } from "@/hooks/useImageUpload";
 import { MemoryUploadModal } from "@/components/memories/MemoryUploadModal";
 import { MemoryCard, MemoryComments } from "@/components/memories/MemoryCard";
 import { MOCK_MEMORIES, MOCK_MENTORS } from "@/lib/mockData";
 import { MemoryItem } from "@/types";
+import { memoryFormSchema } from "@/lib/validation/schemas";
 import {
   subscribeToMemories,
   createMemory,
@@ -27,17 +31,22 @@ import {
   Images,
 } from "lucide-react";
 
+type MemoryFormValues = z.infer<typeof memoryFormSchema>;
+
 export default function MemoriesPage() {
   const { user } = useAuth();
   const { uploadImage, isUploading, error: uploadError } = useImageUpload();
   const [memories, setMemories] = useState<MemoryItem[]>(MOCK_MEMORIES);
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [newTitle, setNewTitle] = useState("");
-  const [newDesc, setNewDesc] = useState("");
-  const [newDate, setNewDate] = useState("Août 2026");
   const [imageUrl, setImageUrl] = useState("");
   const [imagesList, setImagesList] = useState<string[]>([]);
   const [cloudinaryId, setCloudinaryId] = useState("");
+
+  const memoryForm = useForm<MemoryFormValues>({
+    resolver: zodResolver(memoryFormSchema),
+    mode: "onBlur",
+    defaultValues: { title: "", description: "", eventDate: "Août 2026" },
+  });
 
   // Active comments memory ID
   const [activeCommentsMemId, setActiveCommentsMemId] = useState<string | null>(null);
@@ -87,16 +96,13 @@ export default function MemoriesPage() {
     });
   };
 
-  const handleAddMemory = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newTitle.trim()) return;
-
+  const handleAddMemory = async (values: MemoryFormValues) => {
     const mainImg = imagesList[0] || imageUrl || MOCK_MEMORIES[0].imageUrl;
     const finalImages = imagesList.length > 0 ? imagesList : [mainImg];
 
     const newMemData = {
-      title: newTitle,
-      description: newDesc,
+      title: values.title,
+      description: values.description,
       imageUrl: mainImg,
       images: finalImages,
       cloudinaryId: cloudinaryId || `cl_${Date.now()}`,
@@ -104,7 +110,7 @@ export default function MemoriesPage() {
       authorName: user?.name || "Fanilo",
       authorAvatar: user?.avatar || MOCK_MENTORS[0].avatar,
       authorRole: "Mentor",
-      eventDate: newDate,
+      eventDate: values.eventDate,
       likesCount: 1,
       commentsCount: 0,
       reactions: { "❤️": [user?.id || "user-fanilo"] },
@@ -122,8 +128,7 @@ export default function MemoriesPage() {
     }
 
     setShowUploadModal(false);
-    setNewTitle("");
-    setNewDesc("");
+    memoryForm.reset({ title: "", description: "", eventDate: "Août 2026" });
     setImageUrl("");
     setImagesList([]);
     setCloudinaryId("");
@@ -359,24 +364,20 @@ export default function MemoriesPage() {
         </div>
       </div>
 
-      <MemoryUploadModal
-        open={showUploadModal}
-        title={newTitle}
-        description={newDesc}
-        eventDate={newDate}
-        imageUrl={imageUrl}
-        images={imagesList}
-        cloudinaryId={cloudinaryId}
-        isUploading={isUploading}
-        uploadError={uploadError}
-        onTitleChange={setNewTitle}
-        onDescriptionChange={setNewDesc}
-        onEventDateChange={setNewDate}
-        onFileChange={handleFileUpload}
-        onRemoveImage={handleRemoveImage}
-        onClose={() => setShowUploadModal(false)}
-        onSubmit={handleAddMemory}
-      />
+      <FormProvider {...memoryForm}>
+        <MemoryUploadModal
+          open={showUploadModal}
+          imageUrl={imageUrl}
+          images={imagesList}
+          cloudinaryId={cloudinaryId}
+          isUploading={isUploading}
+          uploadError={uploadError}
+          onFileChange={handleFileUpload}
+          onRemoveImage={handleRemoveImage}
+          onClose={() => setShowUploadModal(false)}
+          onSubmit={handleAddMemory}
+        />
+      </FormProvider>
     </div>
   );
 }
