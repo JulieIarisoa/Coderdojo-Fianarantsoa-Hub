@@ -4,8 +4,18 @@ import Image from "next/image";
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "@/providers/AuthProvider";
 import { AlertCircle, User, Mail, Lock, Sparkles } from "lucide-react";
+import { registerSchema } from "@/lib/validation/schemas";
+import { FieldError } from "@/components/common/FieldError";
+
+type RegisterFormValues = {
+  name: string;
+  email: string;
+  password: string;
+};
 
 function formatRegisterError(err: unknown): string {
   const error = err as { code?: string; message?: string };
@@ -29,19 +39,24 @@ function formatRegisterError(err: unknown): string {
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { register, demoLogin } = useAuth();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const { register: registerAccount, demoLogin } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerSchema),
+    mode: "onBlur",
+  });
+
+  const onSubmit = async (values: RegisterFormValues) => {
     setError(null);
     setSubmitting(true);
     try {
-      await register(email, password, name);
+      await registerAccount(values.email, values.password, values.name);
       router.push("/dashboard");
     } catch (err: unknown) {
       setError(formatRegisterError(err));
@@ -81,7 +96,7 @@ export default function RegisterPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
           <div>
             <label className="block font-mono text-xs font-semibold uppercase tracking-wider text-on-surface mb-2">
               Nom complet
@@ -92,13 +107,12 @@ export default function RegisterPage() {
               </div>
               <input
                 type="text"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                {...register("name")}
                 placeholder="Ton nom et prénom"
                 className="block w-full pl-10 pr-3 py-3 border border-outline-variant rounded-lg bg-surface-bright text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all font-body placeholder:text-outline/60"
               />
             </div>
+            <FieldError message={errors.name?.message} />
           </div>
 
           <div>
@@ -111,13 +125,12 @@ export default function RegisterPage() {
               </div>
               <input
                 type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                {...register("email")}
                 placeholder="nom@exemple.com"
                 className="block w-full pl-10 pr-3 py-3 border border-outline-variant rounded-lg bg-surface-bright text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all font-body placeholder:text-outline/60"
               />
             </div>
+            <FieldError message={errors.email?.message} />
           </div>
 
           <div>
@@ -130,13 +143,12 @@ export default function RegisterPage() {
               </div>
               <input
                 type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                {...register("password")}
                 placeholder="Mot de passe sécurisé"
                 className="block w-full pl-10 pr-3 py-3 border border-outline-variant rounded-lg bg-surface-bright text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all font-body placeholder:text-outline/60"
               />
             </div>
+            <FieldError message={errors.password?.message} />
           </div>
 
           <div className="flex flex-col gap-3 mt-2">
