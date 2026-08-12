@@ -70,6 +70,7 @@ interface SecretFriendModalProps {
   onDescriptionChange: (value: string) => void;
   onClose: () => void;
   onSubmit: (event: FormEvent) => void;
+  onReset?: () => void;
 }
 
 export function AdminSecretFriendModal({
@@ -82,6 +83,7 @@ export function AdminSecretFriendModal({
   onDescriptionChange,
   onClose,
   onSubmit,
+  onReset,
 }: SecretFriendModalProps) {
   if (!open) return null;
 
@@ -101,28 +103,44 @@ export function AdminSecretFriendModal({
             </p>
           )}
           <form onSubmit={onSubmit} className="flex flex-col gap-4">
-          <Field label="Titre de la mission">
-            <input
-              type="text"
-              required
-              value={title}
-              onChange={(event) => onTitleChange(event.target.value)}
-              placeholder="Ex: Mission de la semaine"
-              className={inputClassName}
-            />
-          </Field>
-          <Field label="Description de la mission">
-            <textarea
-              rows={2}
-              required
-              value={description}
-              onChange={(event) => onDescriptionChange(event.target.value)}
-              placeholder="Ex: Offrir un café virtuel ou un mot d'encouragement anonyme"
-              className={inputClassName}
-            />
-          </Field>
-          <ModalActions onClose={onClose} submitLabel="Lancer le tirage au sort" />
+            <Field label="Titre de la mission">
+              <input
+                type="text"
+                required
+                value={title}
+                onChange={(event) => onTitleChange(event.target.value)}
+                placeholder="Ex: Mission de la semaine"
+                className={inputClassName}
+              />
+            </Field>
+            <Field label="Description de la mission">
+              <textarea
+                rows={2}
+                required
+                value={description}
+                onChange={(event) => onDescriptionChange(event.target.value)}
+                placeholder="Ex: Offrir un café virtuel ou un mot d'encouragement anonyme"
+                className={inputClassName}
+              />
+            </Field>
+            <ModalActions onClose={onClose} submitLabel="Lancer le tirage au sort" />
           </form>
+
+          {onReset && (
+            <div className="pt-4 mt-2 border-t border-outline-variant/20 flex flex-col gap-2">
+              <span className="font-mono text-[11px] text-on-surface-variant font-semibold">
+                Zone dangereuse / Remise à zéro :
+              </span>
+              <button
+                type="button"
+                onClick={onReset}
+                className="w-full bg-error/10 hover:bg-error/20 text-error font-mono text-xs font-bold py-2.5 px-4 rounded-xl transition-all border border-error/20 flex items-center justify-center gap-1.5"
+              >
+                <ShieldAlert className="w-4 h-4" />
+                Supprimer toutes les données Secret Friend
+              </button>
+            </div>
+          )}
         </>
       )}
     </Modal>

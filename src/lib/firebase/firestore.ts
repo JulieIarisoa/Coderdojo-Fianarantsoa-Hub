@@ -172,11 +172,14 @@ export async function createDailyQuestion(text: string) {
 
 export {
   subscribeToSecretFriendAssignment,
+  subscribeToSecretFriendAssignments,
+  subscribeToSecretFriendCampaigns,
   addSecretFriendJournalEntry,
   subscribeToSecretFriendMessages,
   createSecretFriendMessage,
   markSecretFriendMessageRead,
   createSecretFriendCampaign,
+  resetSecretFriendData,
 } from "./secretFriend";
 
 
