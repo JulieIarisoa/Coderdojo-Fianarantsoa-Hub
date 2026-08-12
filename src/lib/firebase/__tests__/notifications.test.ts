@@ -200,6 +200,14 @@ describe("notifications module", () => {
   });
 
   describe("hasExistingReactionNotification", () => {
+    it("queries only the actor's notifications", async () => {
+      mocks.getDocs.mockResolvedValue({ docs: [] });
+
+      await hasExistingReactionNotification("u2", "u1", "p1");
+
+      expect(mocks.where).toHaveBeenCalledWith("actorId", "==", "u1");
+    });
+
     it("returns true when a matching reaction notification exists", async () => {
       mocks.getDocs.mockResolvedValue({
         docs: [
@@ -237,6 +245,25 @@ describe("notifications module", () => {
               userId: "u2",
               actorId: "u3",
               refId: "p1",
+            }),
+          },
+        ],
+      });
+
+      const result = await hasExistingReactionNotification("u2", "u1", "p1");
+
+      expect(result).toBe(false);
+    });
+
+    it("returns false when the same actor liked a different post", async () => {
+      mocks.getDocs.mockResolvedValue({
+        docs: [
+          {
+            data: () => ({
+              type: "reaction",
+              userId: "u2",
+              actorId: "u1",
+              refId: "p2",
             }),
           },
         ],

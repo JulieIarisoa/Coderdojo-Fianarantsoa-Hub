@@ -78,10 +78,25 @@ export async function toggleLikeCampfirePost(
     likesCount: increment(hasLiked ? -1 : 1),
   });
 
-  const shouldNotify =
-    !hasLiked &&
-    postData.authorId !== actor.id &&
-    !(await hasExistingReactionNotification(postData.authorId, actor.id, postId));
+  // Notification handling must never break the like itself. If the dedup query or the
+  // notification creation fails (e.g. rules not deployed yet), we log and skip the
+  // notification instead of throwing a permission error to the user.
+  let shouldNotify = false;
+  try {
+    shouldNotify =
+      !hasLiked &&
+      postData.authorId !== actor.id &&
+      !(await hasExistingReactionNotification(
+        postData.authorId,
+        actor.id,
+        postId
+      ));
+  } catch (error) {
+    handleCommunityError(
+      error,
+      `toggleLikeCampfirePost notification check (${postId})`
+    );
+  }
 
   if (shouldNotify) {
     await createNotification({

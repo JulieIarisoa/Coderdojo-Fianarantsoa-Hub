@@ -107,9 +107,13 @@ export async function hasExistingReactionNotification(
   actorId: string,
   postId: string
 ) {
+  // Query on actorId (single-field index, no composite index required) so the query only
+  // matches notifications the current user is allowed to read. The remaining filters
+  // (refId/type/userId) are applied client-side to keep the query satisfiable by the
+  // Firestore security rules.
   const notificationsQuery = query(
     collection(db, "notifications"),
-    where("refId", "==", postId)
+    where("actorId", "==", actorId)
   );
 
   const snapshot = await getDocs(notificationsQuery);
@@ -118,7 +122,8 @@ export async function hasExistingReactionNotification(
     return (
       data.type === "reaction" &&
       data.userId === authorId &&
-      data.actorId === actorId
+      data.actorId === actorId &&
+      data.refId === postId
     );
   });
 }
