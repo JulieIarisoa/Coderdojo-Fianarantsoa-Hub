@@ -17,6 +17,7 @@ import {
 import { CampfirePost, PostComment } from "@/types";
 import { db } from "./config";
 import { campfirePostSchema } from "@/lib/validation/schemas";
+import { createNotification } from "./notifications";
 
 function handleCommunityError(error: unknown, source: string) {
   console.error(`[Firestore Error] ${source}:`, error);
@@ -60,18 +61,31 @@ export async function deleteCampfirePost(postId: string) {
   }
 }
 
-export async function toggleLikeCampfirePost(postId: string, userId: string) {
+export async function toggleLikeCampfirePost(
+  postId: string,
+  actor: { id: string; name: string }
+) {
   const postReference = doc(db, "campfirePosts", postId);
   const snapshot = await getDoc(postReference);
   if (!snapshot.exists()) return;
 
-  const hearts: string[] = snapshot.data().reactions?.["❤️"] || [];
-  const hasLiked = hearts.includes(userId);
+  const postData = snapshot.data() as CampfirePost;
+  const hearts: string[] = postData.reactions?.["❤️"] || [];
+  const hasLiked = hearts.includes(actor.id);
 
   await updateDoc(postReference, {
-    "reactions.❤️": hasLiked ? arrayRemove(userId) : arrayUnion(userId),
+    "reactions.❤️": hasLiked ? arrayRemove(actor.id) : arrayUnion(actor.id),
     likesCount: increment(hasLiked ? -1 : 1),
   });
+
+  if (!hasLiked && postData.authorId !== actor.id) {
+    await createNotification({
+      userId: postData.authorId,
+      type: "reaction",
+      message: `${actor.name} a réagi ❤️ à votre publication`,
+      link: "/campfire",
+    });
+  }
 }
 
 export function subscribeToPostComments(
@@ -100,11 +114,26 @@ export async function addCommentToCampfirePost(
   postId: string,
   comment: Omit<PostComment, "id" | "createdAt">
 ) {
+  const postReference = doc(db, "campfirePosts", postId);
+  const postSnapshot = await getDoc(postReference);
+  const postAuthorId = postSnapshot.exists()
+    ? (postSnapshot.data().authorId as string | undefined)
+    : undefined;
+
   await addDoc(collection(db, "campfirePosts", postId, "comments"), {
     ...comment,
     createdAt: serverTimestamp(),
   });
-  await updateDoc(doc(db, "campfirePosts", postId), {
+  await updateDoc(postReference, {
     commentsCount: increment(1),
   });
+
+  if (postAuthorId && postAuthorId !== comment.authorId) {
+    await createNotification({
+      userId: postAuthorId,
+      type: "comment",
+      message: `${comment.authorName} a commenté votre publication`,
+      link: "/campfire",
+    });
+  }
 }
