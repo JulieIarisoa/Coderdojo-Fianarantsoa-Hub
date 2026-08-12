@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, Hanken_Grotesk, JetBrains_Mono } from "next/font/google";
 import { AuthProvider } from "@/providers/AuthProvider";
+import { ThemeProvider } from "@/providers/ThemeProvider";
 import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
 import "./globals.css";
 
@@ -52,10 +53,28 @@ export default function RootLayout({
   return (
     <html
       lang="fr"
+      suppressHydrationWarning
       className={`${plusJakartaSans.variable} ${hankenGrotesk.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="min-h-screen bg-surface text-on-surface flex flex-col font-sans">
-        <AuthProvider>{children}</AuthProvider>
+        <script
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{
+            __html: `(function () {
+  try {
+    var stored = localStorage.getItem("theme");
+    var systemDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    var dark = stored === "dark" || (!stored && systemDark);
+    var root = document.documentElement;
+    root.classList.toggle("dark", dark);
+    root.style.colorScheme = dark ? "dark" : "light";
+  } catch (e) {}
+})();`,
+          }}
+        />
+        <ThemeProvider>
+          <AuthProvider>{children}</AuthProvider>
+        </ThemeProvider>
         <ServiceWorkerRegistration />
       </body>
     </html>

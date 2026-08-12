@@ -1,7 +1,11 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @layer base {
   :root {
+    color-scheme: light;
+
     /* Lumina Dojo Colors */
     --color-surface: #fcf8ff;
     --color-surface-dim: #dad6ff;
@@ -47,6 +51,51 @@
     --font-heading: 'Plus Jakarta Sans', sans-serif;
     --font-body: 'Hanken Grotesk', sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  .dark {
+    color-scheme: dark;
+
+    /* Lumina Dojo Colors — Dark Scheme */
+    --color-surface: #161318;
+    --color-surface-dim: #131015;
+    --color-surface-bright: #3a3640;
+    --color-surface-container-lowest: #0e0b12;
+    --color-surface-container-low: #1c1921;
+    --color-surface-container: #211d26;
+    --color-surface-container-high: #2b2731;
+    --color-surface-container-highest: #35323c;
+    --color-on-surface: #e7e1ec;
+    --color-on-surface-variant: #c9c3d0;
+    --color-inverse-surface: #e7e1ec;
+    --color-inverse-on-surface: #312d38;
+    --color-outline: #938e9f;
+    --color-outline-variant: #4a4554;
+    --color-surface-tint: #d3bbff;
+    --color-primary: #b894ff;
+    --color-on-primary: #330075;
+    --color-primary-container: #562c9e;
+    --color-on-primary-container: #ebddff;
+    --color-inverse-primary: #6e47b7;
+    --color-secondary: #c3c4c4;
+    --color-on-secondary: #2b2d2d;
+    --color-secondary-container: #414343;
+    --color-on-secondary-container: #dfe0e0;
+    --color-tertiary: #b496ff;
+    --color-on-tertiary: #2d0068;
+    --color-tertiary-container: #3d0189;
+    --color-on-tertiary-container: #e9ddff;
+    --color-error: #ffb4ab;
+    --color-on-error: #690005;
+    --color-error-container: #93000a;
+    --color-on-error-container: #ffdad6;
+    --color-primary-fixed: #ebddff;
+    --color-primary-fixed-dim: #d3bbff;
+    --color-on-primary-fixed: #250059;
+    --color-on-primary-fixed-variant: #562c9e;
+    --color-background: #161318;
+    --color-on-background: #e7e1ec;
+    --color-surface-variant: #4a4554;
   }
 }
 
@@ -119,6 +168,19 @@
 
 .shadow-ambient {
   box-shadow: 16px 0 32px -10px rgba(75, 31, 147, 0.06);
+}
+
+.dark .card-shadow {
+  box-shadow: 0 16px 32px -10px rgba(0, 0, 0, 0.45);
+}
+
+.dark .card-shadow:hover {
+  box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.6);
+  transform: translateY(-2px);
+}
+
+.dark .shadow-ambient {
+  box-shadow: 16px 0 32px -10px rgba(0, 0, 0, 0.45);
 }
 
 

@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useAuth } from "@/providers/AuthProvider";
 import { useImageUpload } from "@/hooks/useImageUpload";
 import { updateUserProfile } from "@/lib/firebase/firestore";
+import ThemeSelector from "@/components/settings/ThemeSelector";
 import type { UserProfile } from "@/types";
 import {
   Save,
@@ -191,6 +192,10 @@ export default function SettingsPage() {
             </button>
           </div>
         </form>
+      </div>
+
+      <div className="bg-surface rounded-2xl p-6 card-shadow border border-outline-variant/30">
+        <ThemeSelector />
       </div>
     </div>
   );

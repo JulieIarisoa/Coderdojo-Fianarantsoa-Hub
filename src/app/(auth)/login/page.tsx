@@ -154,7 +154,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full flex items-center justify-center py-3.5 px-8 bg-gradient-to-r from-primary to-surface-tint text-white rounded-lg font-headline text-[18px] leading-tight font-semibold hover:shadow-lg hover:from-surface-tint hover:to-primary transition-all duration-300 transform active:scale-95 disabled:opacity-50"
+              className="w-full flex items-center justify-center py-3.5 px-8 bg-gradient-to-r from-primary to-surface-tint text-white dark:from-primary-container dark:to-inverse-primary dark:hover:from-inverse-primary dark:hover:to-primary-container rounded-lg font-headline text-[18px] leading-tight font-semibold hover:shadow-lg hover:from-surface-tint hover:to-primary transition-all duration-300 transform active:scale-95 disabled:opacity-50"
             >
               {submitting ? "Connexion..." : "Se connecter"}
             </button>
@@ -171,7 +171,7 @@ export default function LoginPage() {
               type="button"
               onClick={handleGoogleSignIn}
               disabled={submitting}
-              className="w-full flex items-center justify-center gap-3 py-3.5 px-8 bg-white border-[1.5px] border-primary text-primary rounded-lg font-headline text-[16px] leading-tight font-semibold hover:bg-surface-container-low transition-all duration-300 transform active:scale-95"
+              className="w-full flex items-center justify-center gap-3 py-3.5 px-8 bg-surface-container-lowest border-[1.5px] border-primary text-primary rounded-lg font-headline text-[16px] leading-tight font-semibold hover:bg-surface-container-low transition-all duration-300 transform active:scale-95"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />

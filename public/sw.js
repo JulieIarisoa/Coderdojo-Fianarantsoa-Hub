@@ -1,7 +1,7 @@
 // CoderDojo Fianarantsoa Hub — Service Worker
 // Strategy: Cache static assets (app shell), network-first for API/data
 
-const CACHE_NAME = "coderdojo-hub-v1";
+const CACHE_NAME = "coderdojo-hub-v2";
 const STATIC_ASSETS = [
   "/",
   "/dashboard",
@@ -43,6 +43,10 @@ self.addEventListener("fetch", (event) => {
 
   // Skip non-GET requests
   if (request.method !== "GET") return;
+
+  // Only handle http(s) requests — chrome-extension://, about:, data: etc. are unsupported by Cache API
+  if (url.protocol !== "http:" && url.protocol !== "https:") return;
+  if (url.hostname.includes("chrome-extension")) return;
 
   // Skip Firebase/Google auth requests — never cache these
   if (
