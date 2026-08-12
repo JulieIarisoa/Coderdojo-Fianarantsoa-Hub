@@ -17,7 +17,7 @@ import {
 import { CampfirePost, PostComment } from "@/types";
 import { db } from "./config";
 import { campfirePostSchema } from "@/lib/validation/schemas";
-import { createNotification } from "./notifications";
+import { createNotification, hasExistingReactionNotification } from "./notifications";
 
 function handleCommunityError(error: unknown, source: string) {
   console.error(`[Firestore Error] ${source}:`, error);
@@ -78,12 +78,19 @@ export async function toggleLikeCampfirePost(
     likesCount: increment(hasLiked ? -1 : 1),
   });
 
-  if (!hasLiked && postData.authorId !== actor.id) {
+  const shouldNotify =
+    !hasLiked &&
+    postData.authorId !== actor.id &&
+    !(await hasExistingReactionNotification(postData.authorId, actor.id, postId));
+
+  if (shouldNotify) {
     await createNotification({
       userId: postData.authorId,
       type: "reaction",
       message: `${actor.name} a réagi ❤️ à votre publication`,
       link: "/campfire",
+      actorId: actor.id,
+      refId: postId,
     });
   }
 }
@@ -134,6 +141,8 @@ export async function addCommentToCampfirePost(
       type: "comment",
       message: `${comment.authorName} a commenté votre publication`,
       link: "/campfire",
+      actorId: comment.authorId,
+      refId: postId,
     });
   }
 }

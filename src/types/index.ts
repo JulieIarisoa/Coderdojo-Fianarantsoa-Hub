@@ -161,5 +161,7 @@ export interface NotificationItem {
   message: string;
   read: boolean;
   link?: string;
+  actorId?: string;
+  refId?: string;
   createdAt: unknown;
 }

@@ -88,6 +88,8 @@ export async function createNotification(notification: {
   type: NotificationItem["type"];
   message: string;
   link?: string;
+  actorId?: string;
+  refId?: string;
 }) {
   try {
     await addDoc(collection(db, "notifications"), {
@@ -98,4 +100,25 @@ export async function createNotification(notification: {
   } catch (error) {
     handleNotificationSnapshotError(error, "createNotification");
   }
+}
+
+export async function hasExistingReactionNotification(
+  authorId: string,
+  actorId: string,
+  postId: string
+) {
+  const notificationsQuery = query(
+    collection(db, "notifications"),
+    where("refId", "==", postId)
+  );
+
+  const snapshot = await getDocs(notificationsQuery);
+  return snapshot.docs.some((document) => {
+    const data = document.data();
+    return (
+      data.type === "reaction" &&
+      data.userId === authorId &&
+      data.actorId === actorId
+    );
+  });
 }

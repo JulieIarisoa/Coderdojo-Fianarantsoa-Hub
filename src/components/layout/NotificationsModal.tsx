@@ -23,6 +23,7 @@ interface NotificationsModalProps {
   onClose: () => void;
   onMarkRead: (notificationId: string) => void;
   onMarkAllRead: () => void;
+  onOpenPost: (postId: string) => void;
 }
 
 const NOTIFICATION_ICONS: Record<NotificationItem["type"], React.ReactNode> = {
@@ -40,6 +41,7 @@ export function NotificationsModal({
   onClose,
   onMarkRead,
   onMarkAllRead,
+  onOpenPost,
 }: NotificationsModalProps) {
   const mounted = useSyncExternalStore(
     () => () => {},
@@ -135,6 +137,22 @@ export function NotificationsModal({
                   )}
                 </div>
               );
+
+              if (notification.refId) {
+                return (
+                  <div
+                    key={notification.id}
+                    className="cursor-pointer"
+                    onClick={() => {
+                      if (isUnread) onMarkRead(notification.id);
+                      onClose();
+                      onOpenPost(notification.refId!);
+                    }}
+                  >
+                    {body}
+                  </div>
+                );
+              }
 
               return notification.link ? (
                 <Link

@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   deleteDoc: vi.fn(),
   doc: vi.fn(),
   getDoc: vi.fn(),
+  getDocs: vi.fn(),
   increment: vi.fn((value: number) => value),
   limit: vi.fn((value: number) => value),
   onSnapshot: vi.fn(),
@@ -13,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   query: vi.fn((value: unknown) => value),
   serverTimestamp: vi.fn(() => "SERVER_TIMESTAMP"),
   updateDoc: vi.fn(),
+  where: vi.fn(),
   arrayRemove: vi.fn((id: string) => id),
   arrayUnion: vi.fn((id: string) => id),
 }));
@@ -23,6 +25,7 @@ vi.mock("firebase/firestore", () => ({
   deleteDoc: mocks.deleteDoc,
   doc: mocks.doc,
   getDoc: mocks.getDoc,
+  getDocs: mocks.getDocs,
   increment: mocks.increment,
   limit: mocks.limit,
   onSnapshot: mocks.onSnapshot,
@@ -30,6 +33,7 @@ vi.mock("firebase/firestore", () => ({
   query: mocks.query,
   serverTimestamp: mocks.serverTimestamp,
   updateDoc: mocks.updateDoc,
+  where: mocks.where,
   arrayRemove: mocks.arrayRemove,
   arrayUnion: mocks.arrayUnion,
 }));
@@ -63,6 +67,7 @@ describe("community module notifications", () => {
 
     it("notifies the author when a new user likes the post", async () => {
       mocks.getDoc.mockResolvedValue({ exists: () => true, data: () => post });
+      mocks.getDocs.mockResolvedValue({ docs: [] });
 
       await toggleLikeCampfirePost("p1", { id: "u1", name: "Fanilo" });
 
@@ -72,9 +77,32 @@ describe("community module notifications", () => {
         type: "reaction",
         message: "Fanilo a réagi ❤️ à votre publication",
         link: "/campfire",
+        actorId: "u1",
+        refId: "p1",
         read: false,
         createdAt: "SERVER_TIMESTAMP",
       });
+    });
+
+    it("does not notify when a reaction notification already exists", async () => {
+      mocks.getDoc.mockResolvedValue({ exists: () => true, data: () => post });
+      mocks.getDocs.mockResolvedValue({
+        docs: [
+          {
+            data: () => ({
+              type: "reaction",
+              userId: "u2",
+              actorId: "u1",
+              refId: "p1",
+            }),
+          },
+        ],
+      });
+
+      await toggleLikeCampfirePost("p1", { id: "u1", name: "Fanilo" });
+
+      expect(mocks.updateDoc).toHaveBeenCalledTimes(1);
+      expect(mocks.addDoc).not.toHaveBeenCalled();
     });
 
     it("does not notify when the like is removed", async () => {
@@ -136,6 +164,8 @@ describe("community module notifications", () => {
         type: "comment",
         message: "Fanilo a commenté votre publication",
         link: "/campfire",
+        actorId: "u1",
+        refId: "p1",
         read: false,
         createdAt: "SERVER_TIMESTAMP",
       });
