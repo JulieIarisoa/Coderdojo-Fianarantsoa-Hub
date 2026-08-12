@@ -10,6 +10,10 @@ import {
   logoutUser,
   subscribeToAuthChanges,
 } from "@/lib/firebase/auth";
+import {
+  ensureMessageEncryptionKey,
+  isMessageEncryptionKeyMismatchError,
+} from "@/lib/firebase/messaging";
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -19,6 +23,7 @@ interface AuthContextType {
   loginWithGoogle: () => Promise<void>;
   demoLogin: () => void;
   logout: () => Promise<void>;
+  updateUser: (partialUser: Partial<UserProfile>) => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -29,6 +34,7 @@ const AuthContext = createContext<AuthContextType>({
   loginWithGoogle: async () => {},
   demoLogin: () => {},
   logout: async () => {},
+  updateUser: () => {},
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -40,8 +46,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     if (hasFirebaseEnv) {
       try {
-        const unsubscribe = subscribeToAuthChanges((profile) => {
+        const unsubscribe = subscribeToAuthChanges(async (profile) => {
           if (profile) {
+            try {
+              await ensureMessageEncryptionKey(profile.id);
+            } catch (keyError) {
+              if (isMessageEncryptionKeyMismatchError(keyError)) {
+                console.warn(
+                  "Message encryption key recovery required for this browser."
+                );
+              } else {
+                console.warn("Message encryption key initialization failed:", keyError);
+              }
+            }
             setUser(profile);
           } else {
             // Check if user is logged in via demo session fallback
@@ -156,9 +173,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  const updateUser = (partialUser: Partial<UserProfile>) => {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const updated = { ...prev, ...partialUser };
+      if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY && typeof window !== "undefined") {
+        sessionStorage.setItem("demo_user", JSON.stringify(updated));
+      }
+      return updated;
+    });
+  };
+
   return (
     <AuthContext.Provider
-      value={{ user, loading, login, register, loginWithGoogle, demoLogin, logout }}
+      value={{ user, loading, login, register, loginWithGoogle, demoLogin, logout, updateUser }}
     >
       {children}
     </AuthContext.Provider>

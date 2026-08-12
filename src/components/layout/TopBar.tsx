@@ -9,6 +9,7 @@ import { InboxModal } from "./InboxModal";
 import { NotificationsModal } from "./NotificationsModal";
 import { PostNotificationModal } from "./PostNotificationModal";
 import { subscribeToReceivedMessages } from "@/lib/firebase/messaging";
+import { subscribeToTotalUnreadCount } from "@/lib/firebase/messaging";
 import {
   subscribeToNotifications,
   markNotificationRead,
@@ -29,8 +30,8 @@ export function TopBar() {
 
   useEffect(() => {
     if (!user || !process.env.NEXT_PUBLIC_FIREBASE_API_KEY) return;
-    const unsub = subscribeToReceivedMessages(user.id, (msgs) => {
-      setUnreadCount(msgs.length);
+    const unsub = subscribeToTotalUnreadCount(user.id, (count) => {
+      setUnreadCount(count);
     });
     return () => unsub();
   }, [user]);
@@ -92,18 +93,18 @@ export function TopBar() {
 
       {/* Right User Actions */}
       <div className="flex items-center gap-4 ml-auto">
-        <button
-          onClick={() => setShowInbox(true)}
-          title="Boîte de réception (Messages directs)"
+        <Link
+          href="/messages"
+          title="Messagerie"
           className="relative w-10 h-10 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-variant/50 transition-all"
         >
           <Mail className="w-5 h-5 text-primary" />
           {unreadCount > 0 && (
             <span className="absolute -top-1 -right-1 bg-primary text-on-primary font-mono text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-surface">
-              {unreadCount}
+              {unreadCount > 99 ? "99+" : unreadCount}
             </span>
           )}
-        </button>
+        </Link>
 
         <button
           onClick={() => setShowNotifications(true)}

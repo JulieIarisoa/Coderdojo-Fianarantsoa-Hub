@@ -4,6 +4,9 @@ import {
   campfirePostSchema,
   memorySchema,
   directMessageSchema,
+  registerSchema,
+  campfireComposerSchema,
+  memoryFormSchema,
 } from "../schemas";
 
 describe("Zod Validation Schemas", () => {
@@ -170,6 +173,121 @@ describe("Zod Validation Schemas", () => {
       };
 
       const result = directMessageSchema.safeParse(invalidMessage);
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe("registerSchema", () => {
+    it("validates a correct registration", () => {
+      const validData = {
+        name: "  Fanilo Razafindrakoto  ",
+        email: "fanilo@coderdojo.mg",
+        password: "secret123",
+      };
+
+      const result = registerSchema.safeParse(validData);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.name).toBe("Fanilo Razafindrakoto");
+      }
+    });
+
+    it("fails when email is invalid", () => {
+      const result = registerSchema.safeParse({
+        name: "Fanilo",
+        email: "not-an-email",
+        password: "secret123",
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it("fails when password is shorter than 6 characters", () => {
+      const result = registerSchema.safeParse({
+        name: "Fanilo",
+        email: "fanilo@coderdojo.mg",
+        password: "123",
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it("fails when name is missing or too short", () => {
+      const result = registerSchema.safeParse({
+        name: "   ",
+        email: "fanilo@coderdojo.mg",
+        password: "secret123",
+      });
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe("campfireComposerSchema", () => {
+    it("validates a correct composer input", () => {
+      const validData = {
+        content: "  Atelier Scratch ce samedi !  ",
+        category: "teaching" as const,
+      };
+
+      const result = campfireComposerSchema.safeParse(validData);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.content).toBe("Atelier Scratch ce samedi !");
+      }
+    });
+
+    it("fails when content is empty or whitespace only", () => {
+      const result = campfireComposerSchema.safeParse({
+        content: "   ",
+        category: "idea",
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it("fails when category is invalid", () => {
+      const result = campfireComposerSchema.safeParse({
+        content: "Un message",
+        category: "invalid_category",
+      });
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe("memoryFormSchema", () => {
+    it("validates a correct memory form", () => {
+      const validData = {
+        title: "  CoderDojo Hackathon 2026  ",
+        description: "Une journée inoubliable.",
+        eventDate: "Août 2026",
+      };
+
+      const result = memoryFormSchema.safeParse(validData);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.title).toBe("CoderDojo Hackathon 2026");
+      }
+    });
+
+    it("fails when title is empty or too long", () => {
+      const tooLong = memoryFormSchema.safeParse({
+        title: "A".repeat(161),
+        description: "",
+        eventDate: "Août 2026",
+      });
+      expect(tooLong.success).toBe(false);
+
+      const empty = memoryFormSchema.safeParse({
+        title: "   ",
+        description: "",
+        eventDate: "Août 2026",
+      });
+      expect(empty.success).toBe(false);
+    });
+
+    it("fails when eventDate is missing", () => {
+      const result = memoryFormSchema.safeParse({
+        title: "Hackathon",
+        description: "",
+        eventDate: "   ",
+      });
       expect(result.success).toBe(false);
     });
   });

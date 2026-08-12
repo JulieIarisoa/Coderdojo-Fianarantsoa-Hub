@@ -9,6 +9,7 @@ import {
   updateUserProfile,
   updateUserStatus,
   createSecretFriendCampaign,
+  resetSecretFriendData,
 } from "@/lib/firebase/firestore";
 import { subscribeToCampfirePosts, deleteCampfirePost } from "@/lib/firebase/community";
 import { createGuessWhoGame } from "@/lib/firebase/gamification";
@@ -218,6 +219,25 @@ export default function AdminPage() {
     } catch (error: unknown) {
       console.error("Secret Friend campaign creation failed:", error);
       setSecretFriendError(error instanceof Error ? error.message : "Le tirage a échoué.");
+    }
+  };
+
+  const handleResetSecretFriend = async () => {
+    if (!window.confirm("Êtes-vous sûr de vouloir supprimer toutes les campagnes, assignations et messages Secret Friend ?")) {
+      return;
+    }
+    try {
+      if (process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
+        await resetSecretFriendData();
+      }
+      setSecretFriendSuccess(true);
+      setTimeout(() => {
+        setSecretFriendSuccess(false);
+        setShowSecretFriendModal(false);
+      }, 1500);
+    } catch (err) {
+      console.error("Reset Secret Friend failed:", err);
+      setSecretFriendError(err instanceof Error ? err.message : "La réinitialisation a échoué.");
     }
   };
 
@@ -540,6 +560,7 @@ export default function AdminPage() {
         onDescriptionChange={setCampaignDesc}
         onClose={() => setShowSecretFriendModal(false)}
         onSubmit={handleCreateSecretFriendCampaign}
+        onReset={handleResetSecretFriend}
       />
       <AdminModerationModal
         open={showModerationModal}

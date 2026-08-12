@@ -10,7 +10,7 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if signedIn();
       allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isAdmin() || (isOwner(userId) && changedOnly(["name", "email", "avatar", "bio", "skills", "workshopsCount", "projectsCount", "studentsCount", "memoriesCount", "updatedAt"]));
+      allow update: if isAdmin() || (isOwner(userId) && changedOnly(["name", "email", "avatar", "bio", "skills", "workshopsCount", "projectsCount", "studentsCount", "memoriesCount", "encryptionPublicKey", "updatedAt"]));
       allow delete: if isAdmin();
     }
 
@@ -45,19 +45,13 @@ service cloud.firestore {
       allow create, delete: if isAdmin();
     }
 
+
     function assignmentForMessage(message) {
       return get(/databases/$(database)/documents/secretFriendAssignments/$(message.assignmentId)).data;
     }
 
-    function isSecretFriendMessageParticipant(message) {
-      let assignment = assignmentForMessage(message);
-      return signedIn() &&
-        (assignment.mentorId == request.auth.uid || assignment.secretFriendId == request.auth.uid) &&
-        (message.senderId == request.auth.uid || message.recipientId == request.auth.uid);
-    }
-
     match /secretFriendMessages/{messageId} {
-      allow read: if isAdmin() || isSecretFriendMessageParticipant(resource.data);
+      allow read: if isAdmin() || (signedIn() && (resource.data.senderId == request.auth.uid || resource.data.recipientId == request.auth.uid));
       allow create: if signedIn() &&
         request.resource.data.senderId == request.auth.uid &&
         request.resource.data.recipientId != request.auth.uid &&
@@ -102,10 +96,33 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    match /conversations/{conversationId} {
+      allow read: if signedIn() &&
+        (!exists(/databases/$(database)/documents/conversations/$(conversationId)) ||
+         request.auth.uid in resource.data.participants);
+      allow create: if signedIn() &&
+        request.auth.uid in request.resource.data.participants &&
+        request.resource.data.participants.size() == 2;
+      allow update: if signedIn() &&
+        request.auth.uid in resource.data.participants &&
+        changedOnly(["lastMessage", "unreadCounts", "typingUsers", "updatedAt", "participantProfiles"]);
+      allow delete: if isAdmin();
+    }
+
     match /directMessages/{messageId} {
-      allow read: if signedIn() && (resource.data.fromId == request.auth.uid || resource.data.toId == request.auth.uid);
-      allow create: if signedIn() && request.resource.data.fromId == request.auth.uid;
-      allow update: if isAdmin() || (signedIn() && resource.data.toId == request.auth.uid && changedOnly(["read"]));
+      allow read: if signedIn();
+      allow create: if signedIn() &&
+        request.resource.data.fromId == request.auth.uid &&
+        request.resource.data.toId != request.auth.uid &&
+        request.resource.data.encryptionVersion == 1 &&
+        request.resource.data.ciphertext is string &&
+        request.resource.data.iv is string;
+      allow update: if isAdmin() ||
+        (signedIn() && resource.data.toId == request.auth.uid && changedOnly(["read"])) ||
+        (signedIn() &&
+          (resource.data.fromId == request.auth.uid || resource.data.toId == request.auth.uid) &&
+          request.resource.data.conversationId is string &&
+          changedOnly(["conversationId"]));
       allow delete: if isAdmin();
     }
   }

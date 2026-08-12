@@ -1,47 +1,43 @@
 "use client";
 
 import Image from "next/image";
-import type { ChangeEvent, FormEvent } from "react";
+import type { ChangeEvent } from "react";
+import { z } from "zod";
+import { Controller, useFormContext } from "react-hook-form";
 import { Camera, CloudUpload, Upload } from "lucide-react";
 import { Modal } from "@/components/common/Modal";
+import { FieldError } from "@/components/common/FieldError";
+import { memoryFormSchema } from "@/lib/validation/schemas";
+
+type MemoryFormValues = z.infer<typeof memoryFormSchema>;
 
 interface MemoryUploadModalProps {
   open: boolean;
-  title: string;
-  description: string;
-  eventDate: string;
   imageUrl: string;
   images: string[];
   cloudinaryId?: string;
   isUploading: boolean;
   uploadError?: string | null;
-  onTitleChange: (value: string) => void;
-  onDescriptionChange: (value: string) => void;
-  onEventDateChange: (value: string) => void;
   onFileChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onRemoveImage: (index: number) => void;
   onClose: () => void;
-  onSubmit: (event: FormEvent) => void;
+  onSubmit: (values: MemoryFormValues) => void;
 }
 
 export function MemoryUploadModal({
   open,
-  title,
-  description,
-  eventDate,
   imageUrl,
   images = [],
   cloudinaryId,
   isUploading,
   uploadError,
-  onTitleChange,
-  onDescriptionChange,
-  onEventDateChange,
   onFileChange,
   onRemoveImage,
   onClose,
   onSubmit,
 }: MemoryUploadModalProps) {
+  const { control, handleSubmit } = useFormContext<MemoryFormValues>();
+
   if (!open) return null;
 
   const allImages = images.length > 0 ? images : imageUrl ? [imageUrl] : [];
@@ -64,27 +60,38 @@ export function MemoryUploadModal({
         )}
       </div>
 
-      <form onSubmit={onSubmit} className="flex flex-col gap-4">
-        <Field label="Titre du souvenir">
-          <input
-            type="text"
-            required
-            value={title}
-            onChange={(event) => onTitleChange(event.target.value)}
-            placeholder="Ex: Workshop Python & Hackathon"
-            className={inputClassName}
-          />
-        </Field>
+      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+        <Controller
+          name="title"
+          control={control}
+          render={({ field, fieldState }) => (
+            <Field label="Titre du souvenir">
+              <input
+                type="text"
+                {...field}
+                placeholder="Ex: Workshop Python & Hackathon"
+                className={inputClassName}
+              />
+              <FieldError message={fieldState.error?.message} />
+            </Field>
+          )}
+        />
 
-        <Field label="Description">
-          <textarea
-            rows={3}
-            value={description}
-            onChange={(event) => onDescriptionChange(event.target.value)}
-            placeholder="Raconte cette belle aventure..."
-            className={`${inputClassName} resize-none`}
-          />
-        </Field>
+        <Controller
+          name="description"
+          control={control}
+          render={({ field, fieldState }) => (
+            <Field label="Description">
+              <textarea
+                rows={3}
+                {...field}
+                placeholder="Raconte cette belle aventure..."
+                className={`${inputClassName} resize-none`}
+              />
+              <FieldError message={fieldState.error?.message} />
+            </Field>
+          )}
+        />
 
         <div>
           <label className="font-mono text-xs uppercase tracking-wider text-on-surface font-semibold mb-1 flex items-center justify-between">
@@ -142,14 +149,20 @@ export function MemoryUploadModal({
           )}
         </div>
 
-        <Field label="Mois & Année">
-          <input
-            type="text"
-            value={eventDate}
-            onChange={(event) => onEventDateChange(event.target.value)}
-            className={inputClassName}
-          />
-        </Field>
+        <Controller
+          name="eventDate"
+          control={control}
+          render={({ field, fieldState }) => (
+            <Field label="Mois & Année">
+              <input
+                type="text"
+                {...field}
+                className={inputClassName}
+              />
+              <FieldError message={fieldState.error?.message} />
+            </Field>
+          )}
+        />
 
         <div className="flex justify-end gap-3 mt-4">
           <button

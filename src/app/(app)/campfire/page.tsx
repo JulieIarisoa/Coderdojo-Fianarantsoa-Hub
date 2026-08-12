@@ -2,10 +2,14 @@
 
 import Image from "next/image";
 import { useState, useEffect } from "react";
+import { useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "@/providers/AuthProvider";
 import { MOCK_POSTS, MOCK_MENTORS } from "@/lib/mockData";
 import { CampfirePost, CampfireCategory } from "@/types";
 import { CampfirePostCard } from "@/components/campfire/CampfirePostCard";
+import { FieldError } from "@/components/common/FieldError";
+import { campfireComposerSchema } from "@/lib/validation/schemas";
 import {
   subscribeToCampfirePosts,
   createCampfirePost,
@@ -29,13 +33,42 @@ const CATEGORIES: { id: CampfireCategory; label: string; icon: React.ReactNode }
   { id: "fun", label: "Fun", icon: <Smile className="w-4 h-4" /> },
 ];
 
+type CampfireComposerValues = {
+  content: string;
+  category: CampfireCategory;
+};
+
+function buildMockPost(
+  data: Omit<CampfirePost, "id" | "createdAt">
+): CampfirePost {
+  return {
+    id: `post-${Date.now()}`,
+    ...data,
+    createdAt: "À l'instant",
+  };
+}
+
 export default function CampfirePage() {
   const { user } = useAuth();
   const [posts, setPosts] = useState<CampfirePost[]>(MOCK_POSTS);
-  const [content, setContent] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<CampfireCategory>("idea");
   const [activeCommentsPostId, setActiveCommentsPostId] = useState<string | null>(null);
   const [commentInput, setCommentInput] = useState("");
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    control,
+    setValue,
+    formState: { errors },
+  } = useForm<CampfireComposerValues>({
+    resolver: zodResolver(campfireComposerSchema),
+    mode: "onBlur",
+    defaultValues: { content: "", category: "idea" },
+  });
+
+  const content = useWatch({ control, name: "content" }) ?? "";
+  const selectedCategory = useWatch({ control, name: "category" }) ?? "idea";
 
   useEffect(() => {
     if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY) return;
@@ -47,16 +80,15 @@ export default function CampfirePage() {
     return () => unsubscribe();
   }, []);
 
-  const handleCreatePost = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!content.trim() || !user) return;
+  const handleCreatePost = async (values: CampfireComposerValues) => {
+    if (!values.content.trim() || !user) return;
 
     const newPostData = {
       authorId: user.id,
       authorName: user.name,
       authorAvatar: user.avatar,
-      content,
-      category: selectedCategory,
+      content: values.content,
+      category: values.category,
       reactions: { "❤️": [user.id] },
       likesCount: 1,
       commentsCount: 0,
@@ -65,15 +97,10 @@ export default function CampfirePage() {
     if (process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
       await createCampfirePost(newPostData);
     } else {
-      const mockNew: CampfirePost = {
-        id: `post-${Date.now()}`,
-        ...newPostData,
-        createdAt: "À l'instant",
-      };
-      setPosts([mockNew, ...posts]);
+      setPosts([buildMockPost(newPostData), ...posts]);
     }
 
-    setContent("");
+    reset({ content: "", category: values.category });
   };
 
   const handleLike = async (postId: string) => {
@@ -141,16 +168,18 @@ export default function CampfirePage() {
         <div className="lg:col-span-2 flex flex-col gap-6">
           {/* Post Composer Card */}
           <div className="bg-surface rounded-2xl p-gutter card-shadow border border-outline-variant/30">
-            <form onSubmit={handleCreatePost} className="flex flex-col gap-4">
+            <form onSubmit={handleSubmit(handleCreatePost)} className="flex flex-col gap-4">
               <div className="flex gap-4 items-start">
                 <Image src={user?.avatar || MOCK_MENTORS[0].avatar} alt={user?.name || "Avatar"} width={48} height={48} className="w-12 h-12 rounded-full object-cover border border-outline-variant/40 shrink-0" />
-                <textarea
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  placeholder="Partage une idée, pose une question, ou lance une discussion..."
-                  rows={3}
-                  className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl p-3 text-on-surface font-body placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary transition-all resize-none"
-                />
+                <div className="w-full">
+                  <textarea
+                    {...register("content")}
+                    placeholder="Partage une idée, pose une question, ou lance une discussion..."
+                    rows={3}
+                    className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl p-3 text-on-surface font-body placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary transition-all resize-none"
+                  />
+                  <FieldError message={errors.content?.message} />
+                </div>
               </div>
 
               {/* Category Pills & Post Action */}
@@ -160,7 +189,7 @@ export default function CampfirePage() {
                     <button
                       key={cat.id}
                       type="button"
-                      onClick={() => setSelectedCategory(cat.id)}
+                      onClick={() => setValue("category", cat.id)}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all ${
                         selectedCategory === cat.id
                           ? "bg-primary text-on-primary shadow-sm"

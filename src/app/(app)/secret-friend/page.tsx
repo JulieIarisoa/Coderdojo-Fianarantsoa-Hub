@@ -4,9 +4,10 @@ import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/providers/AuthProvider";
 import { MOCK_SECRET_FRIEND } from "@/lib/mockData";
-import { SecretFriendAssignment, SecretFriendMessage } from "@/types";
+import { SecretFriendAssignment, SecretFriendCampaign, SecretFriendMessage } from "@/types";
 import {
-  subscribeToSecretFriendAssignment,
+  subscribeToSecretFriendAssignments,
+  subscribeToSecretFriendCampaigns,
   subscribeToSecretFriendMessages,
   createSecretFriendMessage,
   markSecretFriendMessageRead,
@@ -25,6 +26,7 @@ import {
   Sparkles,
   ImagePlus,
   Reply,
+  Layers,
 } from "lucide-react";
 
 const ICON_MAP: Record<string, React.ReactNode> = {
@@ -35,7 +37,9 @@ const ICON_MAP: Record<string, React.ReactNode> = {
 
 export default function SecretFriendPage() {
   const { user } = useAuth();
-  const [assignment, setAssignment] = useState<SecretFriendAssignment>(MOCK_SECRET_FRIEND);
+  const [assignments, setAssignments] = useState<SecretFriendAssignment[]>([]);
+  const [campaigns, setCampaigns] = useState<Record<string, SecretFriendCampaign>>({});
+  const [selectedAssignmentId, setSelectedAssignmentId] = useState<string | null>(null);
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [secretMessage, setSecretMessage] = useState("");
   const [messageImage, setMessageImage] = useState<File | null>(null);
@@ -49,22 +53,35 @@ export default function SecretFriendPage() {
   useEffect(() => {
     if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || !user) return;
 
-    const unsubAssignment = subscribeToSecretFriendAssignment(user.id, (a) => {
-      if (a) {
-        setAssignment({
-          ...a,
-          actionJournal: a.actionJournal || [],
-        });
+    const unsubAssignments = subscribeToSecretFriendAssignments(user.id, (list) => {
+      setAssignments(list);
+      if (list.length > 0) {
+        setSelectedAssignmentId((current) =>
+          current && list.some((a) => a.id === current) ? current : list[0].id
+        );
       }
+    });
+
+    const unsubCampaigns = subscribeToSecretFriendCampaigns((campaignList) => {
+      const map: Record<string, SecretFriendCampaign> = {};
+      campaignList.forEach((c) => {
+        map[c.id] = c;
+      });
+      setCampaigns(map);
     });
 
     const unsubMessages = subscribeToSecretFriendMessages(user.id, setMessages);
 
     return () => {
-      unsubAssignment?.();
+      unsubAssignments?.();
+      unsubCampaigns?.();
       unsubMessages?.();
     };
   }, [user]);
+
+  const assignment =
+    assignments.find((a) => a.id === selectedAssignmentId) || assignments[0] || MOCK_SECRET_FRIEND;
+  const currentCampaign = assignment ? campaigns[assignment.campaignId] : null;
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,10 +99,14 @@ export default function SecretFriendPage() {
       }
 
       const newMessage = {
-        campaignId: assignment.campaignId,
-        assignmentId: assignment.id,
+        campaignId: replyTo?.campaignId || assignment.campaignId,
+        assignmentId: replyTo?.assignmentId || assignment.id,
         senderId: user.id,
-        recipientId: replyTo?.senderId || assignment.secretFriendId,
+        recipientId: replyTo
+          ? replyTo.senderId === user.id
+            ? replyTo.recipientId
+            : replyTo.senderId
+          : assignment.secretFriendId,
         text: secretMessage.trim(),
         ...(imageUrl ? { imageUrl } : {}),
         ...(replyTo ? { replyToId: replyTo.id } : {}),
@@ -131,7 +152,11 @@ export default function SecretFriendPage() {
     }
   };
 
-  const activeMessages = messages.filter((message) => message.assignmentId === assignment.id);
+  const activeMessages = messages.filter(
+    (message) =>
+      (assignment.campaignId && message.campaignId === assignment.campaignId) ||
+      message.assignmentId === assignment.id
+  );
   const receivedMessages = activeMessages.filter((message) => message.recipientId === user?.id);
 
   return (
@@ -147,6 +172,43 @@ export default function SecretFriendPage() {
         </p>
       </div>
 
+      {/* Campaign / Assignment selector if multiple assignments exist */}
+      {assignments.length > 1 && (
+        <div className="bg-surface rounded-2xl p-4 card-shadow border border-outline-variant/30 flex flex-col gap-2">
+          <span className="font-mono text-xs font-semibold text-on-surface-variant flex items-center gap-1.5">
+            <Layers className="w-4 h-4 text-primary" />
+            Tes campagnes Secret Friend ({assignments.length}) :
+          </span>
+          <div className="flex items-center gap-2 overflow-x-auto pt-1 pb-1">
+            {assignments.map((asm, idx) => {
+              const camp = campaigns[asm.campaignId];
+              const isSelected = asm.id === assignment.id;
+              const title = camp?.title || asm.missionTitle || `Campagne ${idx + 1}`;
+              return (
+                <button
+                  key={asm.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedAssignmentId(asm.id);
+                    setReplyTo(null);
+                  }}
+                  className={`px-4 py-2 rounded-full font-mono text-xs font-bold transition-all shrink-0 flex items-center gap-2 ${
+                    isSelected
+                      ? "bg-primary text-on-primary shadow-md"
+                      : "bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest"
+                  }`}
+                >
+                  <span>{title}</span>
+                  {camp?.season && (
+                    <span className="opacity-80 text-[10px]">({camp.season})</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Top Grid: Mystery Card & Mission Card */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Ton Secret Friend Card */}
@@ -155,16 +217,16 @@ export default function SecretFriendPage() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-3">
             <div>
               <h2 className="font-headline text-2xl font-bold text-on-surface mb-1">
-                Ton Secret Friend
+                {currentCampaign?.title ? `Secret Friend - ${currentCampaign.title}` : "Ton Secret Friend"}
               </h2>
               <span className="font-mono text-xs text-on-surface-variant uppercase tracking-wider">
-                Saison Automne 2023
+                {currentCampaign?.season ? `Saison ${currentCampaign.season}` : "Saison Automne 2023"}
               </span>
             </div>
 
             <div className="bg-primary-container/20 text-primary font-mono text-xs font-semibold px-4 py-2 rounded-full flex items-center gap-2">
               <Clock className="w-4 h-4" />
-              Révélation dans 12 jours
+              {currentCampaign ? `Révélation dans ${currentCampaign.revealDaysLeft} jours` : "Révélation dans 12 jours"}
             </div>
           </div>
 
@@ -185,12 +247,12 @@ export default function SecretFriendPage() {
             <div className="flex items-center gap-2 mb-4 text-primary">
               <Flame className="w-5 h-5" />
               <h3 className="font-headline font-bold text-lg">
-                {assignment.missionTitle}
+                {assignment.missionTitle || currentCampaign?.title || "Mission du jour"}
               </h3>
             </div>
 
             <p className="font-headline text-lg font-bold text-on-surface leading-snug mb-6">
-              {assignment.missionDescription}
+              {assignment.missionDescription || currentCampaign?.instruction || "Poser une question secrètement"}
             </p>
           </div>
 

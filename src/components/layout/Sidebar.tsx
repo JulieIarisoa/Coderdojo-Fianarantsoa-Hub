@@ -1,13 +1,16 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/providers/AuthProvider";
+import { subscribeToTotalUnreadCount } from "@/lib/firebase/messaging";
 import { cn } from "@/lib/utils/cn";
 import {
   LayoutDashboard,
   Users,
+  MessageCircle,
   Flame,
   BookImage,
   HeartHandshake,
@@ -27,6 +30,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Mentors", href: "/mentors", icon: Users },
+  { label: "Messages", href: "/messages", icon: MessageCircle },
   { label: "Campfire", href: "/campfire", icon: Flame },
   { label: "Memories", href: "/memories", icon: BookImage },
   { label: "Secret Friend", href: "/secret-friend", icon: HeartHandshake },
@@ -37,6 +41,15 @@ const navItems: NavItem[] = [
 export function Sidebar() {
   const pathname = usePathname();
   const { user } = useAuth();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (!user || !process.env.NEXT_PUBLIC_FIREBASE_API_KEY) return;
+    const unsub = subscribeToTotalUnreadCount(user.id, (count) => {
+      setUnreadCount(count);
+    });
+    return () => unsub();
+  }, [user]);
 
   return (
     <nav className="hidden lg:flex flex-col h-full border-r border-outline-variant/40 bg-surface-container-lowest shadow-[16px_0_32px_-10px_rgba(75,31,147,0.06)] w-60 fixed left-0 top-0 z-50">
@@ -55,19 +68,28 @@ export function Sidebar() {
           {navItems.map((item) => {
             const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname?.startsWith(item.href));
             const Icon = item.icon;
+            const isMessages = item.href === "/messages";
             return (
               <li key={item.href}>
                 <Link
                   href={item.href}
                   className={cn(
-                    "flex items-center gap-3 px-4 py-3 font-label-md text-label-md transition-all duration-200 rounded-r-full border-l-4",
+                    "flex items-center justify-between px-4 py-3 font-label-md text-label-md transition-all duration-200 rounded-r-full border-l-4",
                     isActive
                       ? "bg-surface-container text-primary border-primary font-bold shadow-sm"
                       : "text-on-surface-variant hover:bg-surface-container-high border-transparent"
                   )}
                 >
-                  <Icon className="w-5 h-5" />
-                  <span>{item.label}</span>
+                  <div className="flex items-center gap-3">
+                    <Icon className="w-5 h-5" />
+                    <span>{item.label}</span>
+                  </div>
+
+                  {isMessages && unreadCount > 0 && (
+                    <span className="bg-primary text-on-primary font-mono text-[10px] font-bold min-w-[20px] h-5 rounded-full flex items-center justify-center px-1.5 shadow-sm">
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </span>
+                  )}
                 </Link>
               </li>
             );
