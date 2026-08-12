@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useAuth } from "@/providers/AuthProvider";
 import { useImageUpload } from "@/hooks/useImageUpload";
 import { updateUserProfile } from "@/lib/firebase/firestore";
+import type { UserProfile } from "@/types";
 import {
   Save,
   LogOut,
@@ -17,7 +18,7 @@ import {
 } from "lucide-react";
 
 export default function SettingsPage() {
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   const { uploadImage, isUploading, error: uploadError } = useImageUpload();
   const [name, setName] = useState(user?.name || "");
   const [bio, setBio] = useState(user?.bio || "");
@@ -31,13 +32,15 @@ export default function SettingsPage() {
 
     setSaving(true);
     try {
+      const updates: Partial<UserProfile> = {
+        name,
+        bio,
+        ...(avatarUrl !== user.avatar ? { avatar: avatarUrl } : {}),
+      };
       if (process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
-        await updateUserProfile(user.id, {
-          name,
-          bio,
-          ...(avatarUrl !== user.avatar ? { avatar: avatarUrl } : {}),
-        });
+        await updateUserProfile(user.id, updates);
       }
+      updateUser(updates);
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch (err) {
