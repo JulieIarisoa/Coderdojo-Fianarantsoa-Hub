@@ -2,16 +2,17 @@ import {
   collection,
   doc,
   addDoc,
+  getDocs,
   onSnapshot,
   query,
   where,
-  limit,
   updateDoc,
   serverTimestamp,
   arrayUnion,
   writeBatch,
 } from "firebase/firestore";
 import { db } from "./config";
+import { createNotification } from "./notifications";
 import {
   SecretFriendAssignment,
   SecretFriendCampaign,
@@ -29,39 +30,71 @@ function handleSecretFriendError(error: unknown, source: string) {
   }
 }
 
-export function subscribeToSecretFriendAssignment(
+export function subscribeToSecretFriendAssignments(
   mentorId: string,
-  callback: (assignment: SecretFriendAssignment | null) => void
+  callback: (assignments: SecretFriendAssignment[]) => void
 ) {
   try {
     const assignmentQuery = query(
       collection(db, "secretFriendAssignments"),
-      where("mentorId", "==", mentorId),
-      limit(1)
+      where("mentorId", "==", mentorId)
     );
 
     return onSnapshot(
       assignmentQuery,
       (snapshot) => {
         if (snapshot.empty) {
-          callback(null);
+          callback([]);
           return;
         }
 
-        const document = snapshot.docs[0];
-        const data = document.data();
-        callback({
+        const list = snapshot.docs.map((docSnap) => ({
           actionJournal: [],
-          ...data,
-          id: document.id,
-        } as unknown as SecretFriendAssignment);
+          ...docSnap.data(),
+          id: docSnap.id,
+        })) as unknown as SecretFriendAssignment[];
+
+        callback(list);
       },
-      (error) => handleSecretFriendError(error, `subscribeToSecretFriendAssignment(${mentorId})`)
+      (error) => handleSecretFriendError(error, `subscribeToSecretFriendAssignments(${mentorId})`)
     );
   } catch (err) {
-    handleSecretFriendError(err, `subscribeToSecretFriendAssignment(${mentorId})`);
+    handleSecretFriendError(err, `subscribeToSecretFriendAssignments(${mentorId})`);
     return () => {};
   }
+}
+
+export function subscribeToSecretFriendCampaigns(
+  callback: (campaigns: SecretFriendCampaign[]) => void
+) {
+  try {
+    const campaignsQuery = query(collection(db, "secretFriendCampaigns"));
+
+    return onSnapshot(
+      campaignsQuery,
+      (snapshot) => {
+        const list = snapshot.docs.map((docSnap) => ({
+          ...docSnap.data(),
+          id: docSnap.id,
+        })) as SecretFriendCampaign[];
+
+        callback(list);
+      },
+      (error) => handleSecretFriendError(error, `subscribeToSecretFriendCampaigns`)
+    );
+  } catch (err) {
+    handleSecretFriendError(err, `subscribeToSecretFriendCampaigns`);
+    return () => {};
+  }
+}
+
+export function subscribeToSecretFriendAssignment(
+  mentorId: string,
+  callback: (assignment: SecretFriendAssignment | null) => void
+) {
+  return subscribeToSecretFriendAssignments(mentorId, (list) => {
+    callback(list.length > 0 ? list[0] : null);
+  });
 }
 
 export async function addSecretFriendJournalEntry(
@@ -149,6 +182,15 @@ export async function createSecretFriendMessage(
     read: false,
     createdAt: serverTimestamp(),
   });
+
+  if (message.recipientId) {
+    await createNotification({
+      userId: message.recipientId,
+      type: "secret-friend",
+      message: "Tu as reçu un nouveau message anonyme !",
+      link: "/secret-friend",
+    });
+  }
 }
 
 export async function markSecretFriendMessageRead(messageId: string) {
@@ -183,13 +225,37 @@ export async function createSecretFriendCampaign(
   await batch.commit();
 }
 
+export async function resetSecretFriendData() {
+  const batch = writeBatch(db);
+  const collections = ["secretFriendCampaigns", "secretFriendAssignments", "secretFriendMessages"];
+
+  for (const collName of collections) {
+    const snap = await getDocs(collection(db, collName));
+    snap.docs.forEach((docSnap) => {
+      batch.delete(docSnap.ref);
+    });
+  }
+
+  const notifSnap = await getDocs(
+    query(collection(db, "notifications"), where("type", "==", "secret-friend"))
+  );
+  notifSnap.docs.forEach((docSnap) => {
+    batch.delete(docSnap.ref);
+  });
+
+  await batch.commit();
+}
+
 const secretFriend = {
   subscribeToSecretFriendAssignment,
+  subscribeToSecretFriendAssignments,
+  subscribeToSecretFriendCampaigns,
   addSecretFriendJournalEntry,
   subscribeToSecretFriendMessages,
   createSecretFriendMessage,
   markSecretFriendMessageRead,
   createSecretFriendCampaign,
+  resetSecretFriendData,
 };
 
 export default secretFriend;

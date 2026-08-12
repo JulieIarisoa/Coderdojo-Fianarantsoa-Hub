@@ -11,7 +11,9 @@
     "test": "vitest run",
     "validate": "npm run typecheck && npm run lint && npm test",
     "sync:firestore": "node scripts/sync-firestore-data.mjs",
-    "sync:firestore:apply": "node scripts/sync-firestore-data.mjs --apply"
+    "sync:firestore:apply": "node scripts/sync-firestore-data.mjs --apply",
+    "reset:secret-friend": "node scripts/reset-secret-friend-data.mjs",
+    "reset:secret-friend:apply": "node scripts/reset-secret-friend-data.mjs --apply"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.7.1",
@@ -28,12 +30,14 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@opentelemetry/api": "^1.9.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.0",
+    "firebase-admin": "^14.2.0",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.10"
