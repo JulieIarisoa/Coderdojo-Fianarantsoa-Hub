@@ -157,7 +157,7 @@ export interface MilestoneItem {
 export interface NotificationItem {
   id: string;
   userId: string;
-  type: 'comment' | 'reaction' | 'memory' | 'badge' | 'secret-friend';
+  type: 'comment' | 'reaction' | 'memory' | 'badge' | 'secret-friend' | 'message';
   message: string;
   read: boolean;
   link?: string;

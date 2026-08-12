@@ -1,4 +1,4 @@
-import { UserProfile, CampfirePost, MemoryItem, SecretFriendAssignment, GuessWhoGame, BadgeItem, MilestoneItem } from "@/types";
+import { UserProfile, CampfirePost, MemoryItem, SecretFriendAssignment, GuessWhoGame, BadgeItem, MilestoneItem, NotificationItem } from "@/types";
 
 export const MOCK_CURRENT_USER: UserProfile = {
   id: "user-fanilo",
@@ -257,5 +257,44 @@ export const MOCK_MILESTONES: MilestoneItem[] = [
     completed: false,
     progress: 14,
     maxProgress: 20,
+  },
+];
+
+export const MOCK_NOTIFICATIONS: NotificationItem[] = [
+  {
+    id: "notif-1",
+    userId: "user-fanilo",
+    type: "badge",
+    message: "Badge « Mentor du Mois » débloqué !",
+    read: false,
+    link: "/badges",
+    createdAt: new Date(Date.now() - 60_000).toISOString(),
+  },
+  {
+    id: "notif-2",
+    userId: "user-fanilo",
+    type: "message",
+    message: "Aina t'a envoyé un message.",
+    read: false,
+    link: "/mentors",
+    createdAt: new Date(Date.now() - 3_600_000).toISOString(),
+  },
+  {
+    id: "notif-3",
+    userId: "user-fanilo",
+    type: "comment",
+    message: "Soa a commenté ton souvenir.",
+    read: false,
+    link: "/memories",
+    createdAt: new Date(Date.now() - 86_400_000).toISOString(),
+  },
+  {
+    id: "notif-4",
+    userId: "user-fanilo",
+    type: "reaction",
+    message: "Rabe a réagi à ton post du campfire.",
+    read: true,
+    link: "/campfire",
+    createdAt: new Date(Date.now() - 172_800_000).toISOString(),
   },
 ];

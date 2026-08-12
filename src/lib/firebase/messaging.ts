@@ -8,6 +8,7 @@ import {
 } from "firebase/firestore";
 import { db } from "./config";
 import { directMessageSchema } from "@/lib/validation/schemas";
+import { createNotification } from "./notifications";
 
 export interface DirectMessage {
   id: string;
@@ -35,6 +36,11 @@ export async function sendDirectMessage(message: {
       ...validatedMessage,
       createdAt: serverTimestamp(),
       read: false,
+    });
+    await createNotification({
+      userId: message.toId,
+      type: "message",
+      message: `Nouveau message de ${message.fromName}`,
     });
   } catch (error) {
     console.error("[Firestore Error] sendDirectMessage:", error);

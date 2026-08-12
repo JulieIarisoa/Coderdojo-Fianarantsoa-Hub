@@ -80,7 +80,7 @@ export default function CampfirePage() {
     if (!user) return;
 
     if (process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
-      await toggleLikeCampfirePost(postId, user.id);
+      await toggleLikeCampfirePost(postId, { id: user.id, name: user.name });
     } else {
       setPosts(
         posts.map((p) => {
