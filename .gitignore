@@ -69,6 +69,5 @@ yarn-error.log*
 next-env.d.ts
 
 # package managers
-package-lock.json
 firebase-keys/coderdojo-fianarantsoa-hub-firebase-adminsdk-fbsvc-8e0c4f4b1c.json
 scripts/
