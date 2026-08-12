@@ -18,6 +18,7 @@ import { createNotification } from "./notifications";
 import {
   decryptMessage,
   encryptMessage,
+  getMessageIdentities,
   getOrCreateMessageIdentity,
   MessagePublicKey,
 } from "@/lib/crypto/messaging";
@@ -137,6 +138,41 @@ function timestampToMillis(value: unknown) {
     return new Date(value).getTime() || 0;
   }
   return 0;
+}
+
+type EncryptedMessage = {
+  fromId: string;
+  toId: string;
+  ciphertext?: string;
+  iv?: string;
+  senderPublicKey?: MessagePublicKey;
+  recipientPublicKey?: MessagePublicKey;
+};
+
+async function decryptWithAvailableIdentity(
+  message: EncryptedMessage,
+  userId: string,
+  identities: Awaited<ReturnType<typeof getMessageIdentities>>
+) {
+  if (!message.ciphertext || !message.iv || !message.senderPublicKey || !message.recipientPublicKey) {
+    throw new Error("Message chiffré incomplet");
+  }
+
+  const ownPublicKey = message.fromId === userId ? message.senderPublicKey : message.recipientPublicKey;
+  const otherPublicKey = message.fromId === userId ? message.recipientPublicKey : message.senderPublicKey;
+  const matching = identities.filter((identity) => publicKeysMatch(identity.publicKey, ownPublicKey));
+  const fallback = identities.filter((identity) => !matching.includes(identity));
+  let lastError: unknown;
+
+  for (const identity of [...matching, ...fallback]) {
+    try {
+      return await decryptMessage(message.ciphertext, message.iv, identity.privateKey, otherPublicKey);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error("Message chiffré indisponible");
 }
 
 // ────────────────────────────────────────────────────────────────────────────────
@@ -269,17 +305,8 @@ export function subscribeToConversationMessages(
           }
 
           try {
-            const identity = await getOrCreateMessageIdentity(userId);
-            const publicKey =
-              msg.fromId === userId
-                ? msg.recipientPublicKey
-                : msg.senderPublicKey;
-            const content = await decryptMessage(
-              msg.ciphertext,
-              msg.iv,
-              identity.privateKey,
-              publicKey
-            );
+            const identities = await getMessageIdentities(userId);
+            const content = await decryptWithAvailableIdentity(msg, userId, identities);
             return { ...msg, content };
           } catch {
             return {
@@ -443,6 +470,8 @@ export async function sendDirectMessage(message: {
   toName: string;
   content: string;
 }) {
+  directMessageSchema.parse(message);
+
   const convo = await getOrCreateConversation(
     { id: message.fromId, name: message.fromName, avatar: message.fromAvatar },
     { id: message.toId, name: message.toName, avatar: "" }
