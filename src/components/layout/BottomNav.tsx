@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/providers/AuthProvider";
@@ -15,10 +15,12 @@ import {
   HeartHandshake,
   UserSearch,
   BookImage,
+  MessageCircle,
   Settings,
   ShieldCheck,
   ChevronRight,
 } from "lucide-react";
+import { subscribeToTotalUnreadCount } from "@/lib/firebase/messaging";
 import type { LucideIcon } from "lucide-react";
 
 interface NavItem {
@@ -38,8 +40,24 @@ export function BottomNav() {
   const pathname = usePathname();
   const { user } = useAuth();
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (!user || !process.env.NEXT_PUBLIC_FIREBASE_API_KEY) return;
+    const unsub = subscribeToTotalUnreadCount(user.id, (count) => {
+      setUnreadCount(count);
+    });
+    return () => unsub();
+  }, [user]);
 
   const secondaryNavItems = [
+    {
+      label: "Messages",
+      href: "/messages",
+      icon: MessageCircle,
+      description: "Discussions Messenger chiffrées",
+      badge: unreadCount > 0 ? (unreadCount > 99 ? "99+" : unreadCount) : null,
+    },
     {
       label: "Secret Friend",
       href: "/secret-friend",
@@ -163,9 +181,16 @@ export function BottomNav() {
                         <Icon className="w-5 h-5" />
                       </div>
                       <div>
-                        <span className="font-headline font-bold text-sm block">
-                          {item.label}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-headline font-bold text-sm block">
+                            {item.label}
+                          </span>
+                          {item.badge && (
+                            <span className="bg-primary text-on-primary font-mono text-[10px] font-bold min-w-5 h-5 rounded-full flex items-center justify-center px-1.5 shadow-sm">
+                              {item.badge}
+                            </span>
+                          )}
+                        </div>
                         <span className="font-body text-xs text-on-surface-variant">
                           {item.description}
                         </span>

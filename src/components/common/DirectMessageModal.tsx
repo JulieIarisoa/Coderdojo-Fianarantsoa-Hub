@@ -2,9 +2,14 @@
 
 import Image from "next/image";
 import { useState } from "react";
-import { CheckCircle, Send } from "lucide-react";
+import { CheckCircle, KeyRound, Send } from "lucide-react";
 import { UserProfile } from "@/types";
 import { Modal } from "./Modal";
+import { useAuth } from "@/providers/AuthProvider";
+import {
+  isMessageEncryptionKeyMismatchError,
+  resetMessageEncryptionKey,
+} from "@/lib/firebase/messaging";
 
 interface DirectMessageModalProps {
   recipient: UserProfile;
@@ -17,9 +22,14 @@ export function DirectMessageModal({
   onClose,
   onSend,
 }: DirectMessageModalProps) {
+  const { user } = useAuth();
   const [content, setContent] = useState("");
   const [sent, setSent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [recoveringKey, setRecoveringKey] = useState(false);
+  const [needsKeyRecovery, setNeedsKeyRecovery] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -27,12 +37,49 @@ export function DirectMessageModal({
     if (!trimmedContent || submitting) return;
 
     setSubmitting(true);
+    setError("");
+    setNotice("");
+    setNeedsKeyRecovery(false);
     try {
       await onSend(trimmedContent);
       setSent(true);
       setTimeout(onClose, 1500);
+    } catch (sendError) {
+      if (isMessageEncryptionKeyMismatchError(sendError)) {
+        setNeedsKeyRecovery(true);
+        setError(
+          "La clé de ce navigateur n'est plus synchronisée avec ton compte. Réinitialise-la pour envoyer de nouveaux messages."
+        );
+      } else {
+        setError(
+          sendError instanceof Error
+            ? sendError.message
+            : "Le message n'a pas pu être envoyé."
+        );
+      }
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleRecoverKey = async () => {
+    if (!user || recoveringKey) return;
+
+    setRecoveringKey(true);
+    setError("");
+    setNotice("");
+    try {
+      await resetMessageEncryptionKey(user.id);
+      setNeedsKeyRecovery(false);
+      setNotice("Clé réinitialisée. Tu peux renvoyer le message.");
+    } catch (recoverError) {
+      setError(
+        recoverError instanceof Error
+          ? recoverError.message
+          : "La clé n'a pas pu être réinitialisée."
+      );
+    } finally {
+      setRecoveringKey(false);
     }
   };
 
@@ -69,6 +116,27 @@ export function DirectMessageModal({
             placeholder={`Écris ton message pour ${recipient.name}...`}
             className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl p-3 text-on-surface font-body resize-none focus:outline-none focus:ring-2 focus:ring-primary"
           />
+          {error && (
+            <p className="font-mono text-xs text-error" role="alert">
+              {error}
+            </p>
+          )}
+          {notice && (
+            <p className="font-mono text-xs text-primary" role="status">
+              {notice}
+            </p>
+          )}
+          {needsKeyRecovery && (
+            <button
+              type="button"
+              onClick={handleRecoverKey}
+              disabled={!user || recoveringKey}
+              className="self-start bg-primary-container/20 text-primary hover:bg-primary-container/40 font-mono text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1.5 disabled:opacity-40"
+            >
+              <KeyRound className="w-3.5 h-3.5" />
+              {recoveringKey ? "Réinitialisation..." : "Réinitialiser la clé"}
+            </button>
+          )}
           <div className="flex justify-end gap-3">
             <button
               type="button"

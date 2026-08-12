@@ -10,7 +10,7 @@ import {
   subscribeToSecretFriendMessages,
   createSecretFriendMessage,
   markSecretFriendMessageRead,
-} from "@/lib/firebase/firestore";
+} from "@/lib/firebase/secretFriend";
 import { useImageUpload } from "@/hooks/useImageUpload";
 import {
   Gift,
