@@ -4,8 +4,15 @@ import Image from "next/image";
 import { useState, useEffect, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { useAuth } from "@/providers/AuthProvider";
-import { subscribeToReceivedMessages, sendDirectMessage, DirectMessage } from "@/lib/firebase/messaging";
-import { Mail, X, Send, CheckCircle, Clock } from "lucide-react";
+import {
+  subscribeToUserMessages,
+  sendDirectMessage,
+  markDirectMessageRead,
+  isMessageEncryptionKeyMismatchError,
+  resetMessageEncryptionKey,
+  DirectMessage,
+} from "@/lib/firebase/messaging";
+import { Mail, X, Send, CheckCircle, Clock, KeyRound } from "lucide-react";
 
 export function InboxModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const { user } = useAuth();
@@ -18,38 +25,86 @@ export function InboxModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =
   const [replyTarget, setReplyTarget] = useState<DirectMessage | null>(null);
   const [replyContent, setReplyContent] = useState("");
   const [replySent, setReplySent] = useState(false);
+  const [recoveringKey, setRecoveringKey] = useState(false);
+  const [needsKeyRecovery, setNeedsKeyRecovery] = useState(false);
+  const [sendError, setSendError] = useState("");
+  const [sendNotice, setSendNotice] = useState("");
 
   useEffect(() => {
     if (!isOpen || !user || !process.env.NEXT_PUBLIC_FIREBASE_API_KEY) return;
 
-    const unsub = subscribeToReceivedMessages(user.id, (msgs) => {
+    const unsub = subscribeToUserMessages(user.id, (msgs) => {
       setMessages(msgs);
     });
 
     return () => unsub();
   }, [isOpen, user]);
 
+  useEffect(() => {
+    if (!isOpen || !user) return;
+
+    const unreadMessages = messages.filter(
+      (message) => message.toId === user.id && !message.read
+    );
+    void Promise.all(unreadMessages.map((message) => markDirectMessageRead(message.id)));
+  }, [isOpen, messages, user]);
+
   const handleSendReply = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!replyContent.trim() || !replyTarget || !user) return;
 
-    if (process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
-      await sendDirectMessage({
-        fromId: user.id,
-        fromName: user.name,
-        fromAvatar: user.avatar,
-        toId: replyTarget.fromId,
-        toName: replyTarget.fromName,
-        content: replyContent,
-      });
-    }
+    setSendError("");
+    setSendNotice("");
+    setNeedsKeyRecovery(false);
+    try {
+      if (process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
+        await sendDirectMessage({
+          fromId: user.id,
+          fromName: user.name,
+          fromAvatar: user.avatar,
+          toId: replyTarget.fromId,
+          toName: replyTarget.fromName,
+          content: replyContent,
+        });
+      }
 
-    setReplySent(true);
-    setTimeout(() => {
-      setReplySent(false);
-      setReplyTarget(null);
-      setReplyContent("");
-    }, 1500);
+      setReplySent(true);
+      setTimeout(() => {
+        setReplySent(false);
+        setReplyTarget(null);
+        setReplyContent("");
+      }, 1500);
+    } catch (error) {
+      if (isMessageEncryptionKeyMismatchError(error)) {
+        setNeedsKeyRecovery(true);
+        setSendError(
+          "La clé de ce navigateur n'est plus synchronisée avec ton compte. Réinitialise-la pour envoyer de nouveaux messages."
+        );
+      } else {
+        setSendError(
+          error instanceof Error ? error.message : "Le message n'a pas pu être envoyé."
+        );
+      }
+    }
+  };
+
+  const handleRecoverKey = async () => {
+    if (!user || recoveringKey) return;
+
+    setRecoveringKey(true);
+    setSendError("");
+    setSendNotice("");
+    try {
+      await resetMessageEncryptionKey(user.id);
+      setNeedsKeyRecovery(false);
+      setSendNotice("Clé réinitialisée. Tu peux renvoyer la réponse.");
+    } catch (error) {
+      setSendError(
+        error instanceof Error ? error.message : "La clé n'a pas pu être réinitialisée."
+      );
+    } finally {
+      setRecoveringKey(false);
+    }
   };
 
   if (!isOpen || !mounted) return null;
@@ -60,7 +115,7 @@ export function InboxModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =
         <div className="flex justify-between items-center mb-4">
           <h3 className="font-headline text-lg font-bold text-on-surface flex items-center gap-2">
             <Mail className="w-5 h-5 text-primary" />
-            Boîte de réception (Messages reçus)
+            Discussions en temps réel
           </h3>
           <button onClick={onClose} className="text-on-surface-variant hover:text-on-surface">
             <X className="w-5 h-5" />
@@ -90,6 +145,30 @@ export function InboxModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =
                   className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl p-3 text-on-surface font-body resize-none focus:outline-none focus:ring-2 focus:ring-primary"
                 />
 
+                {sendError && (
+                  <p className="font-mono text-xs text-error" role="alert">
+                    {sendError}
+                  </p>
+                )}
+
+                {sendNotice && (
+                  <p className="font-mono text-xs text-primary" role="status">
+                    {sendNotice}
+                  </p>
+                )}
+
+                {needsKeyRecovery && (
+                  <button
+                    type="button"
+                    onClick={handleRecoverKey}
+                    disabled={!user || recoveringKey}
+                    className="self-start bg-primary-container/20 text-primary hover:bg-primary-container/40 font-mono text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1.5 disabled:opacity-40"
+                  >
+                    <KeyRound className="w-3.5 h-3.5" />
+                    {recoveringKey ? "Réinitialisation..." : "Réinitialiser la clé"}
+                  </button>
+                )}
+
                 <div className="flex justify-end gap-3">
                   <button
                     type="button"
@@ -114,16 +193,31 @@ export function InboxModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =
             {messages.length === 0 ? (
               <div className="py-12 text-center text-on-surface-variant font-body text-sm">
                 <Mail className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                <p>Aucun message reçu pour l&apos;instant.</p>
-                <p className="font-mono text-xs mt-1">Les messages envoyés par d&apos;autres mentors apparaîtront ici.</p>
+                <p>Aucune discussion pour l&apos;instant.</p>
+                <p className="font-mono text-xs mt-1">Les messages envoyés et reçus apparaîtront ici.</p>
               </div>
             ) : (
               messages.map((msg) => (
-                <div key={msg.id} className="bg-surface-container-low p-4 rounded-xl border border-outline-variant/30 flex flex-col gap-2">
+                <div
+                  key={msg.id}
+                  className={`p-4 rounded-xl border flex flex-col gap-2 ${
+                    msg.fromId === user?.id
+                      ? "bg-primary-container/20 border-primary/20 ml-8"
+                      : "bg-surface-container-low border-outline-variant/30 mr-8"
+                  }`}
+                >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Image src={msg.fromAvatar} alt={msg.fromName} width={32} height={32} className="w-8 h-8 rounded-full object-cover border border-outline-variant/40" />
-                      <span className="font-headline font-bold text-xs text-on-surface">{msg.fromName}</span>
+                      {msg.fromAvatar ? (
+                        <Image src={msg.fromAvatar} alt={msg.fromName} width={32} height={32} className="w-8 h-8 rounded-full object-cover border border-outline-variant/40" />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-primary-container text-primary flex items-center justify-center text-xs font-bold border border-outline-variant/40">
+                          {(msg.fromName || "U").charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <span className="font-headline font-bold text-xs text-on-surface">
+                        {msg.fromId === user?.id ? "Vous" : msg.fromName}
+                      </span>
                     </div>
                     <span className="font-mono text-[10px] text-on-surface-variant flex items-center gap-1">
                       <Clock className="w-3 h-3" />
@@ -132,15 +226,17 @@ export function InboxModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =
                   </div>
                   <p className="font-body text-sm text-on-surface">{msg.content}</p>
 
-                  <div className="flex justify-end pt-2">
-                    <button
-                      onClick={() => setReplyTarget(msg)}
-                      className="bg-primary-container/20 text-primary hover:bg-primary-container/40 font-mono text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1"
-                    >
-                      <Send className="w-3.5 h-3.5" />
-                      Répondre
-                    </button>
-                  </div>
+                  {msg.fromId !== user?.id && (
+                    <div className="flex justify-end pt-2">
+                      <button
+                        onClick={() => setReplyTarget(msg)}
+                        className="bg-primary-container/20 text-primary hover:bg-primary-container/40 font-mono text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1"
+                      >
+                        <Send className="w-3.5 h-3.5" />
+                        Répondre
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))
             )}

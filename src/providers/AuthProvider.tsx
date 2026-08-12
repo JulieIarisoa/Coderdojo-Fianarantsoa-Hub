@@ -10,6 +10,10 @@ import {
   logoutUser,
   subscribeToAuthChanges,
 } from "@/lib/firebase/auth";
+import {
+  ensureMessageEncryptionKey,
+  isMessageEncryptionKeyMismatchError,
+} from "@/lib/firebase/messaging";
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -42,8 +46,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     if (hasFirebaseEnv) {
       try {
-        const unsubscribe = subscribeToAuthChanges((profile) => {
+        const unsubscribe = subscribeToAuthChanges(async (profile) => {
           if (profile) {
+            try {
+              await ensureMessageEncryptionKey(profile.id);
+            } catch (keyError) {
+              if (isMessageEncryptionKeyMismatchError(keyError)) {
+                console.warn(
+                  "Message encryption key recovery required for this browser."
+                );
+              } else {
+                console.warn("Message encryption key initialization failed:", keyError);
+              }
+            }
             setUser(profile);
           } else {
             // Check if user is logged in via demo session fallback

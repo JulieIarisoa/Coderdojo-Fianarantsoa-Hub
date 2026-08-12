@@ -8,8 +8,8 @@ import {
   subscribeToAllMentors,
   updateUserProfile,
   updateUserStatus,
-  createSecretFriendCampaign,
 } from "@/lib/firebase/firestore";
+import { createSecretFriendCampaign } from "@/lib/firebase/secretFriend";
 import { subscribeToCampfirePosts, deleteCampfirePost } from "@/lib/firebase/community";
 import { createGuessWhoGame } from "@/lib/firebase/gamification";
 import { CampfirePost, UserProfile } from "@/types";
