@@ -155,7 +155,7 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full flex items-center justify-center py-3.5 px-8 bg-gradient-to-r from-primary to-surface-tint text-white rounded-lg font-headline text-[18px] leading-tight font-semibold hover:shadow-lg hover:from-surface-tint hover:to-primary transition-all duration-300 transform active:scale-95 disabled:opacity-50"
+              className="w-full flex items-center justify-center py-3.5 px-8 bg-gradient-to-r from-primary to-surface-tint text-white dark:from-primary-container dark:to-inverse-primary dark:hover:from-inverse-primary dark:hover:to-primary-container rounded-lg font-headline text-[18px] leading-tight font-semibold hover:shadow-lg hover:from-surface-tint hover:to-primary transition-all duration-300 transform active:scale-95 disabled:opacity-50"
             >
               {submitting ? "Inscription..." : "S&apos;inscrire"}
             </button>

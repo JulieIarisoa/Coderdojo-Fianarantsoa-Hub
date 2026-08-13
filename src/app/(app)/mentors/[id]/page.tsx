@@ -112,7 +112,7 @@ export default function MentorProfilePage({ params }: { params: Promise<{ id: st
             {/* Avatar with Verified Badge */}
             <div className="relative mb-4">
               <Image src={mentor.avatar} alt={mentor.name} width={96} height={96} className="w-24 h-24 rounded-full object-cover border-4 border-surface shadow-md" />
-              <div className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center">
+              <div className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-primary text-on-primary flex items-center justify-center">
                 <CheckCircle className="w-4 h-4" />
               </div>
             </div>
@@ -297,7 +297,7 @@ export default function MentorProfilePage({ params }: { params: Promise<{ id: st
               </div>
 
               <div className="flex items-start gap-4 relative z-10">
-                <div className="w-6 h-6 rounded-full bg-outline text-white flex items-center justify-center shrink-0 mt-1">
+                <div className="w-6 h-6 rounded-full bg-outline text-surface-container-lowest flex items-center justify-center shrink-0 mt-1">
                   <Trophy className="w-3.5 h-3.5" />
                 </div>
                 <div>
