@@ -1,10 +1,10 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useEffect, useSyncExternalStore } from "react";
+import { useState, useEffect, useRef, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { useAuth } from "@/providers/AuthProvider";
-import { subscribeToReceivedMessages, sendDirectMessage, DirectMessage } from "@/lib/firebase/messaging";
+import { subscribeToReceivedMessages, sendDirectMessage, DirectMessage, markMessageAsRead } from "@/lib/firebase/messaging";
 import { Mail, X, Send, CheckCircle, Clock } from "lucide-react";
 
 export function InboxModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
@@ -18,6 +18,17 @@ export function InboxModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =
   const [replyTarget, setReplyTarget] = useState<DirectMessage | null>(null);
   const [replyContent, setReplyContent] = useState("");
   const [replySent, setReplySent] = useState(false);
+  const readInProgress = useRef<Set<string>>(new Set());
+
+  const markAsRead = async (messageId: string) => {
+    if (readInProgress.current.has(messageId)) return;
+    readInProgress.current.add(messageId);
+    try {
+      await markMessageAsRead(messageId);
+    } finally {
+      readInProgress.current.delete(messageId);
+    }
+  };
 
   useEffect(() => {
     if (!isOpen || !user || !process.env.NEXT_PUBLIC_FIREBASE_API_KEY) return;
@@ -119,7 +130,11 @@ export function InboxModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =
               </div>
             ) : (
               messages.map((msg) => (
-                <div key={msg.id} className="bg-surface-container-low p-4 rounded-xl border border-outline-variant/30 flex flex-col gap-2">
+                <div
+                  key={msg.id}
+                  onClick={() => markAsRead(msg.id)}
+                  className="bg-surface-container-low p-4 rounded-xl border border-outline-variant/30 flex flex-col gap-2 cursor-pointer"
+                >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Image src={msg.fromAvatar} alt={msg.fromName} width={32} height={32} className="w-8 h-8 rounded-full object-cover border border-outline-variant/40" />
@@ -133,10 +148,10 @@ export function InboxModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =
                   <p className="font-body text-sm text-on-surface">{msg.content}</p>
 
                   <div className="flex justify-end pt-2">
-                    <button
-                      onClick={() => setReplyTarget(msg)}
-                      className="bg-primary-container/20 text-primary hover:bg-primary-container/40 font-mono text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1"
-                    >
+                      <button
+                        onClick={(e) => { e.stopPropagation(); void markAsRead(msg.id); setReplyTarget(msg); }}
+                        className="bg-primary-container/20 text-primary hover:bg-primary-container/40 font-mono text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1"
+                      >
                       <Send className="w-3.5 h-3.5" />
                       Répondre
                     </button>

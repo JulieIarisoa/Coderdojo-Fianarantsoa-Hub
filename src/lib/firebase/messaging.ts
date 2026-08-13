@@ -1,6 +1,8 @@
 import {
   addDoc,
   collection,
+  doc,
+  updateDoc,
   onSnapshot,
   query,
   where,
@@ -38,6 +40,15 @@ export async function sendDirectMessage(message: {
     });
   } catch (error) {
     console.error("[Firestore Error] sendDirectMessage:", error);
+  }
+}
+
+export async function markMessageAsRead(messageId: string) {
+  try {
+    const messageRef = doc(db, "directMessages", messageId);
+    await updateDoc(messageRef, { read: true });
+  } catch (error) {
+    console.error("[Firestore Error] markMessageAsRead:", error);
   }
 }
 

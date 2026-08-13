@@ -16,7 +16,7 @@ export function TopBar() {
   useEffect(() => {
     if (!user || !process.env.NEXT_PUBLIC_FIREBASE_API_KEY) return;
     const unsub = subscribeToReceivedMessages(user.id, (msgs) => {
-      setUnreadCount(msgs.length);
+      setUnreadCount(msgs.filter((m) => !m.read).length);
     });
     return () => unsub();
   }, [user]);
