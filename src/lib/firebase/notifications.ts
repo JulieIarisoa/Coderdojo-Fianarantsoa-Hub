@@ -88,6 +88,8 @@ export async function createNotification(notification: {
   type: NotificationItem["type"];
   message: string;
   link?: string;
+  actorId?: string;
+  refId?: string;
 }) {
   try {
     await addDoc(collection(db, "notifications"), {
@@ -98,4 +100,30 @@ export async function createNotification(notification: {
   } catch (error) {
     handleNotificationSnapshotError(error, "createNotification");
   }
+}
+
+export async function hasExistingReactionNotification(
+  authorId: string,
+  actorId: string,
+  postId: string
+) {
+  // Query on actorId (single-field index, no composite index required) so the query only
+  // matches notifications the current user is allowed to read. The remaining filters
+  // (refId/type/userId) are applied client-side to keep the query satisfiable by the
+  // Firestore security rules.
+  const notificationsQuery = query(
+    collection(db, "notifications"),
+    where("actorId", "==", actorId)
+  );
+
+  const snapshot = await getDocs(notificationsQuery);
+  return snapshot.docs.some((document) => {
+    const data = document.data();
+    return (
+      data.type === "reaction" &&
+      data.userId === authorId &&
+      data.actorId === actorId &&
+      data.refId === postId
+    );
+  });
 }

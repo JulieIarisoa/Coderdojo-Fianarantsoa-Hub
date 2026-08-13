@@ -7,6 +7,8 @@ import { useAuth } from "@/providers/AuthProvider";
 import { Bell, Mail } from "lucide-react";
 import { InboxModal } from "./InboxModal";
 import { NotificationsModal } from "./NotificationsModal";
+import { PostNotificationModal } from "./PostNotificationModal";
+import { subscribeToReceivedMessages } from "@/lib/firebase/messaging";
 import { subscribeToTotalUnreadCount } from "@/lib/firebase/messaging";
 import {
   subscribeToNotifications,
@@ -21,6 +23,7 @@ export function TopBar() {
   const { user } = useAuth();
   const [showInbox, setShowInbox] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] =
     useState<NotificationItem[]>(MOCK_NOTIFICATIONS);
@@ -137,7 +140,15 @@ export function TopBar() {
         onClose={() => setShowNotifications(false)}
         onMarkRead={handleMarkRead}
         onMarkAllRead={handleMarkAllRead}
+        onOpenPost={setSelectedPostId}
       />
+      {selectedPostId && user && (
+        <PostNotificationModal
+          postId={selectedPostId}
+          user={user}
+          onClose={() => setSelectedPostId(null)}
+        />
+      )}
     </header>
   );
 }

@@ -36,6 +36,7 @@ import {
   subscribeToNotifications,
   markAllNotificationsRead,
   createNotification,
+  hasExistingReactionNotification,
 } from "../notifications";
 
 describe("notifications module", () => {
@@ -173,6 +174,104 @@ describe("notifications module", () => {
         read: false,
         createdAt: "SERVER_TIMESTAMP",
       });
+    });
+
+    it("persists the actorId and refId when provided", async () => {
+      mocks.addDoc.mockResolvedValue({ id: "n1" });
+
+      await createNotification({
+        userId: "u2",
+        type: "reaction",
+        message: "Fanilo a réagi à votre publication",
+        actorId: "u1",
+        refId: "p1",
+      });
+
+      expect(mocks.addDoc).toHaveBeenCalledWith("notifications", {
+        userId: "u2",
+        type: "reaction",
+        message: "Fanilo a réagi à votre publication",
+        actorId: "u1",
+        refId: "p1",
+        read: false,
+        createdAt: "SERVER_TIMESTAMP",
+      });
+    });
+  });
+
+  describe("hasExistingReactionNotification", () => {
+    it("queries only the actor's notifications", async () => {
+      mocks.getDocs.mockResolvedValue({ docs: [] });
+
+      await hasExistingReactionNotification("u2", "u1", "p1");
+
+      expect(mocks.where).toHaveBeenCalledWith("actorId", "==", "u1");
+    });
+
+    it("returns true when a matching reaction notification exists", async () => {
+      mocks.getDocs.mockResolvedValue({
+        docs: [
+          {
+            data: () => ({
+              type: "reaction",
+              userId: "u2",
+              actorId: "u1",
+              refId: "p1",
+            }),
+          },
+        ],
+      });
+
+      const result = await hasExistingReactionNotification("u2", "u1", "p1");
+
+      expect(result).toBe(true);
+      expect(mocks.query).toHaveBeenCalled();
+    });
+
+    it("returns false when no notification references the post", async () => {
+      mocks.getDocs.mockResolvedValue({ docs: [] });
+
+      const result = await hasExistingReactionNotification("u2", "u1", "p1");
+
+      expect(result).toBe(false);
+    });
+
+    it("returns false when a notification exists for a different actor", async () => {
+      mocks.getDocs.mockResolvedValue({
+        docs: [
+          {
+            data: () => ({
+              type: "reaction",
+              userId: "u2",
+              actorId: "u3",
+              refId: "p1",
+            }),
+          },
+        ],
+      });
+
+      const result = await hasExistingReactionNotification("u2", "u1", "p1");
+
+      expect(result).toBe(false);
+    });
+
+    it("returns false when the same actor liked a different post", async () => {
+      mocks.getDocs.mockResolvedValue({
+        docs: [
+          {
+            data: () => ({
+              type: "reaction",
+              userId: "u2",
+              actorId: "u1",
+              refId: "p2",
+            }),
+          },
+        ],
+      });
+
+      const result = await hasExistingReactionNotification("u2", "u1", "p1");
+
+      expect(result).toBe(false);
     });
   });
 });

@@ -81,12 +81,17 @@ service cloud.firestore {
     match /milestones/{milestoneId} { allow read: if signedIn(); allow write: if isAdmin(); }
 
     match /notifications/{notificationId} {
-      allow read: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid);
+      // A user can read notifications addressed to them, or notifications they triggered (as actor).
+      // The actor scope is required so users can query the notifications they caused (e.g. to
+      // deduplicate reaction notifications) without leaking other users' notifications.
+      allow read: if isAdmin() || (signedIn() && (resource.data.userId == request.auth.uid || resource.data.actorId == request.auth.uid));
+      // actorId, when provided, must identify the creator: the read rule trusts it to scope access.
       allow create: if signedIn() &&
         request.resource.data.userId != request.auth.uid &&
         request.resource.data.read == false &&
         request.resource.data.createdAt is timestamp &&
-        request.resource.data.type in ["badge", "comment", "reaction", "memory", "secret-friend", "message"];
+        request.resource.data.type in ["badge", "comment", "reaction", "memory", "secret-friend", "message"] &&
+        (!("actorId" in request.resource.data) || request.resource.data.actorId == request.auth.uid);
       allow update: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid && changedOnly(["read"]));
       allow delete: if isAdmin();
     }
