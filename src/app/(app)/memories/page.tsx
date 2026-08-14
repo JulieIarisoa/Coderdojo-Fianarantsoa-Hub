@@ -10,6 +10,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import { useImageUpload } from "@/hooks/useImageUpload";
 import { MemoryUploadModal } from "@/components/memories/MemoryUploadModal";
 import { MemoryCard, MemoryComments } from "@/components/memories/MemoryCard";
+import { ReactionPicker } from "@/components/common/ReactionPicker";
 import { MOCK_MEMORIES, MOCK_MENTORS } from "@/lib/mockData";
 import { MemoryItem } from "@/types";
 import { memoryFormSchema } from "@/lib/validation/schemas";
@@ -134,52 +135,62 @@ export default function MemoriesPage() {
     setCloudinaryId("");
   };
 
-  const handleLike = async (memoryId: string) => {
+  const handleLike = async (memoryId: string, emoji: string = "❤️") => {
     if (!user) return;
 
+    setMemories((prevMemories) =>
+      prevMemories.map((m) => {
+        if (m.id === memoryId) {
+          const hasReacted = m.reactions?.[emoji]?.includes(user.id);
+          const newLikes = hasReacted ? Math.max(0, m.likesCount - 1) : m.likesCount + 1;
+          const newReactions = { ...(m.reactions || {}) };
+          newReactions[emoji] = hasReacted
+            ? (newReactions[emoji] || []).filter((id) => id !== user.id)
+            : [...(newReactions[emoji] || []), user.id];
+          return {
+            ...m,
+            likesCount: newLikes,
+            reactions: newReactions,
+          };
+        }
+        return m;
+      })
+    );
+
     if (process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
-      await toggleLikeMemory(memoryId, user.id);
-    } else {
-      setMemories(
-        memories.map((m) => {
-          if (m.id === memoryId) {
-            const hasLiked = m.reactions["❤️"]?.includes(user.id);
-            return {
-              ...m,
-              likesCount: hasLiked ? m.likesCount - 1 : m.likesCount + 1,
-              reactions: {
-                ...m.reactions,
-                "❤️": hasLiked
-                  ? (m.reactions["❤️"] || []).filter((id) => id !== user.id)
-                  : [...(m.reactions["❤️"] || []), user.id],
-              },
-            };
-          }
-          return m;
-        })
-      );
+      try {
+        await toggleLikeMemory(memoryId, user.id, emoji);
+      } catch (err) {
+        console.warn("Firestore memory like sync error:", err);
+      }
     }
   };
 
   const handleComment = async (memoryId: string) => {
     if (!commentInput.trim() || !user) return;
 
-    if (process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
-      await addCommentToMemory(memoryId, {
-        postId: memoryId,
-        authorId: user.id,
-        authorName: user.name,
-        authorAvatar: user.avatar,
-        content: commentInput,
-      });
-    } else {
-      setMemories(
-        memories.map((m) =>
-          m.id === memoryId ? { ...m, commentsCount: m.commentsCount + 1 } : m
-        )
-      );
-    }
+    const currentComment = commentInput;
     setCommentInput("");
+
+    setMemories((prevMemories) =>
+      prevMemories.map((m) =>
+        m.id === memoryId ? { ...m, commentsCount: m.commentsCount + 1 } : m
+      )
+    );
+
+    if (process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
+      try {
+        await addCommentToMemory(memoryId, {
+          postId: memoryId,
+          authorId: user.id,
+          authorName: user.name,
+          authorAvatar: user.avatar,
+          content: currentComment,
+        });
+      } catch (err) {
+        console.warn("Firestore memory comment sync error:", err);
+      }
+    }
   };
 
   const handleShareMemory = async (title: string, desc: string) => {
@@ -263,6 +274,31 @@ export default function MemoriesPage() {
               </p>
             </div>
 
+            {/* Active Reactions Pills */}
+            {memories[0].reactions && Object.keys(memories[0].reactions).length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 pt-2">
+                {Object.entries(memories[0].reactions).map(([emoji, userIds]) => {
+                  if (!userIds || userIds.length === 0) return null;
+                  const hasReacted = Boolean(user && userIds.includes(user.id));
+                  return (
+                    <button
+                      key={emoji}
+                      type="button"
+                      onClick={() => handleLike(memories[0].id, emoji)}
+                      className={`px-2.5 py-1 rounded-full font-mono text-xs flex items-center gap-1.5 border transition-all ${
+                        hasReacted
+                          ? "bg-primary-container/20 border-primary text-primary font-bold shadow-xs"
+                          : "bg-surface-container-low border-outline-variant/30 text-on-surface-variant hover:border-primary/40"
+                      }`}
+                    >
+                      <span>{emoji}</span>
+                      <span>{userIds.length}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
             <div className="flex flex-col gap-4 pt-4 border-t border-outline-variant/20">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
@@ -277,12 +313,16 @@ export default function MemoriesPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4 font-mono text-xs text-on-surface-variant">
+                <div className="relative flex items-center gap-4 font-mono text-xs text-on-surface-variant">
                   <button
-                    onClick={() => handleLike(memories[0].id)}
-                    className="flex items-center gap-1.5 hover:text-primary transition-colors"
+                    onClick={() => handleLike(memories[0].id, "❤️")}
+                    className={`flex items-center gap-1.5 transition-colors cursor-pointer ${
+                      user && memories[0].reactions?.["❤️"]?.includes(user.id)
+                        ? "text-error font-bold"
+                        : "hover:text-primary"
+                    }`}
                   >
-                    <Heart className="w-5 h-5" />
+                    <Heart className="w-5 h-5" fill={user && memories[0].reactions?.["❤️"]?.includes(user.id) ? "currentColor" : "none"} />
                     <span>{memories[0].likesCount}</span>
                   </button>
 
@@ -292,15 +332,20 @@ export default function MemoriesPage() {
                         activeCommentsMemId === memories[0].id ? null : memories[0].id
                       )
                     }
-                    className="flex items-center gap-1.5 hover:text-primary transition-colors"
+                    className="flex items-center gap-1.5 hover:text-primary transition-colors cursor-pointer"
                   >
                     <MessageCircle className="w-5 h-5" />
                     <span>{memories[0].commentsCount} Commentaires</span>
                   </button>
 
+                  <ReactionPicker
+                    onSelectEmoji={(emoji) => handleLike(memories[0].id, emoji)}
+                    label="😀+ Réagir"
+                  />
+
                   <button
                     onClick={() => handleShareMemory(memories[0].title, memories[0].description)}
-                    className="hover:text-primary transition-colors"
+                    className="hover:text-primary transition-colors cursor-pointer"
                     title="Partager ce souvenir"
                   >
                     <Share2 className="w-5 h-5" />
@@ -348,6 +393,7 @@ export default function MemoriesPage() {
             <MemoryCard
               key={memory.id}
               memory={memory}
+              userId={user?.id}
               commentsOpen={activeCommentsMemId === memory.id}
               commentInput={commentInput}
               onLike={handleLike}

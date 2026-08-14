@@ -20,7 +20,14 @@ import { campfirePostSchema } from "@/lib/validation/schemas";
 import { createNotification, hasExistingReactionNotification } from "./notifications";
 
 function handleCommunityError(error: unknown, source: string) {
-  console.error(`[Firestore Error] ${source}:`, error);
+  const code = (error as { code?: string })?.code;
+  if (code === "permission-denied") {
+    console.warn(
+      `[Firestore Permission Warning] ${source}: Insufficient permissions or unauthenticated session.`
+    );
+  } else {
+    console.error(`[Firestore Error] ${source}:`, error);
+  }
 }
 
 export function subscribeToCampfirePosts(callback: (posts: CampfirePost[]) => void) {
@@ -63,19 +70,20 @@ export async function deleteCampfirePost(postId: string) {
 
 export async function toggleLikeCampfirePost(
   postId: string,
-  actor: { id: string; name: string }
+  actor: { id: string; name: string },
+  emoji: string = "❤️"
 ) {
   const postReference = doc(db, "campfirePosts", postId);
   const snapshot = await getDoc(postReference);
   if (!snapshot.exists()) return;
 
   const postData = snapshot.data() as CampfirePost;
-  const hearts: string[] = postData.reactions?.["❤️"] || [];
-  const hasLiked = hearts.includes(actor.id);
+  const usersForEmoji: string[] = postData.reactions?.[emoji] || [];
+  const hasReacted = usersForEmoji.includes(actor.id);
 
   await updateDoc(postReference, {
-    "reactions.❤️": hasLiked ? arrayRemove(actor.id) : arrayUnion(actor.id),
-    likesCount: increment(hasLiked ? -1 : 1),
+    [`reactions.${emoji}`]: hasReacted ? arrayRemove(actor.id) : arrayUnion(actor.id),
+    likesCount: increment(hasReacted ? -1 : 1),
   });
 
   // Notification handling must never break the like itself. If the dedup query or the
@@ -84,7 +92,7 @@ export async function toggleLikeCampfirePost(
   let shouldNotify = false;
   try {
     shouldNotify =
-      !hasLiked &&
+      !hasReacted &&
       postData.authorId !== actor.id &&
       !(await hasExistingReactionNotification(
         postData.authorId,
@@ -102,7 +110,7 @@ export async function toggleLikeCampfirePost(
     await createNotification({
       userId: postData.authorId,
       type: "reaction",
-      message: `${actor.name} a réagi ❤️ à votre publication`,
+      message: `${actor.name} a réagi ${emoji} à votre publication`,
       link: "/campfire",
       actorId: actor.id,
       refId: postId,

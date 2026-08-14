@@ -13,6 +13,7 @@ import {
   addCommentToMemory,
 } from "@/lib/firebase/memories";
 import { MemoryComments } from "@/components/memories/MemoryCard";
+import { ReactionPicker } from "@/components/common/ReactionPicker";
 import {
   ArrowLeft,
   Calendar,
@@ -104,25 +105,30 @@ export default function MemoryDetailPage() {
     setActiveImageIndex((prev) => (prev === allPhotos.length - 1 ? 0 : prev + 1));
   };
 
-  const handleLike = async () => {
+  const handleLike = async (emoji: string = "❤️") => {
     if (!user) return;
+
+    const hasReacted = memory.reactions?.[emoji]?.includes(user.id);
+    setMemory((prev) => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        likesCount: hasReacted ? Math.max(0, prev.likesCount - 1) : prev.likesCount + 1,
+        reactions: {
+          ...(prev.reactions || {}),
+          [emoji]: hasReacted
+            ? (prev.reactions?.[emoji] || []).filter((id) => id !== user.id)
+            : [...(prev.reactions?.[emoji] || []), user.id],
+        },
+      };
+    });
+
     if (process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
-      await toggleLikeMemory(memory.id, user.id);
-    } else {
-      const hasLiked = memory.reactions?.["❤️"]?.includes(user.id);
-      setMemory((prev) => {
-        if (!prev) return null;
-        return {
-          ...prev,
-          likesCount: hasLiked ? prev.likesCount - 1 : prev.likesCount + 1,
-          reactions: {
-            ...prev.reactions,
-            "❤️": hasLiked
-              ? (prev.reactions?.["❤️"] || []).filter((id) => id !== user.id)
-              : [...(prev.reactions?.["❤️"] || []), user.id],
-          },
-        };
-      });
+      try {
+        await toggleLikeMemory(memory.id, user.id, emoji);
+      } catch (err) {
+        console.warn("Firestore memory like sync error:", err);
+      }
     }
   };
 
@@ -300,12 +306,37 @@ export default function MemoryDetailPage() {
           </p>
         </div>
 
+        {/* Active Reactions Pills */}
+        {memory.reactions && Object.keys(memory.reactions).length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 pt-2">
+            {Object.entries(memory.reactions).map(([emoji, userIds]) => {
+              if (!userIds || userIds.length === 0) return null;
+              const hasReacted = Boolean(user && userIds.includes(user.id));
+              return (
+                <button
+                  key={emoji}
+                  type="button"
+                  onClick={() => handleLike(emoji)}
+                  className={`px-3 py-1 rounded-full font-mono text-xs flex items-center gap-1.5 border transition-all ${
+                    hasReacted
+                      ? "bg-primary-container/20 border-primary text-primary font-bold shadow-xs"
+                      : "bg-surface-container-low border-outline-variant/30 text-on-surface-variant hover:border-primary/40"
+                  }`}
+                >
+                  <span>{emoji}</span>
+                  <span>{userIds.length}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {/* Actions Bar */}
-        <div className="flex items-center justify-between pt-4 border-t border-outline-variant/20 font-mono text-sm">
+        <div className="relative flex items-center justify-between pt-4 border-t border-outline-variant/20 font-mono text-sm">
           <div className="flex items-center gap-6">
             <button
-              onClick={handleLike}
-              className="flex items-center gap-2 text-on-surface-variant hover:text-primary transition-colors font-bold"
+              onClick={() => handleLike("❤️")}
+              className="flex items-center gap-2 text-on-surface-variant hover:text-primary transition-colors font-bold cursor-pointer"
             >
               <Heart className="w-5 h-5 text-red-500 fill-red-500/20" />
               <span>{memory.likesCount} J&apos;aime</span>
@@ -317,13 +348,20 @@ export default function MemoryDetailPage() {
             </span>
           </div>
 
-          <button
-            onClick={handleShare}
-            className="flex items-center gap-2 text-on-surface-variant hover:text-primary transition-colors font-semibold"
-          >
-            <Share2 className="w-5 h-5" />
-            <span>Partager</span>
-          </button>
+          <div className="flex items-center gap-3">
+            <ReactionPicker
+              onSelectEmoji={(emoji) => handleLike(emoji)}
+              label="😀+ Réagir"
+            />
+
+            <button
+              onClick={handleShare}
+              className="flex items-center gap-2 text-on-surface-variant hover:text-primary transition-colors font-semibold cursor-pointer"
+            >
+              <Share2 className="w-5 h-5" />
+              <span>Partager</span>
+            </button>
+          </div>
         </div>
 
         {/* Comments Thread Section */}

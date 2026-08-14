@@ -84,6 +84,26 @@ describe("community module notifications", () => {
       });
     });
 
+    it("writes a custom emoji key and includes it in the notification", async () => {
+      mocks.getDoc.mockResolvedValue({ exists: () => true, data: () => post });
+      mocks.getDocs.mockResolvedValue({ docs: [] });
+
+      await toggleLikeCampfirePost("p1", { id: "u1", name: "Fanilo" }, "🎉");
+
+      expect(mocks.updateDoc).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          "reactions.🎉": expect.anything(),
+        })
+      );
+      expect(mocks.addDoc).toHaveBeenCalledWith(
+        "notifications",
+        expect.objectContaining({
+          message: "Fanilo a réagi 🎉 à votre publication",
+        })
+      );
+    });
+
     it("does not notify when a reaction notification already exists", async () => {
       mocks.getDoc.mockResolvedValue({ exists: () => true, data: () => post });
       mocks.getDocs.mockResolvedValue({

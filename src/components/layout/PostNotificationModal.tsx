@@ -58,26 +58,26 @@ export function PostNotificationModal({
     };
   }, [postId]);
 
-  const handleLike = async (postIdToLike: string) => {
+  const handleLike = async (postIdToLike: string, emoji: string = "❤️") => {
     if (!post) return;
-    const hearts = post.reactions["❤️"] || [];
-    const hasLiked = hearts.includes(user.id);
+    const usersForEmoji = post.reactions[emoji] || [];
+    const hasReacted = usersForEmoji.includes(user.id);
 
     setPost({
       ...post,
       reactions: {
         ...post.reactions,
-        "❤️": hasLiked
-          ? hearts.filter((id) => id !== user.id)
-          : [...hearts, user.id],
+        [emoji]: hasReacted
+          ? usersForEmoji.filter((id) => id !== user.id)
+          : [...usersForEmoji, user.id],
       },
-      likesCount: post.likesCount + (hasLiked ? -1 : 1),
+      likesCount: post.likesCount + (hasReacted ? -1 : 1),
     });
 
     await toggleLikeCampfirePost(postIdToLike, {
       id: user.id,
       name: user.name,
-    });
+    }, emoji);
   };
 
   const handleComment = async () => {

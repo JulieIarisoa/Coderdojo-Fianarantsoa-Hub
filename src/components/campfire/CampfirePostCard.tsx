@@ -7,10 +7,10 @@ import {
   Link as LinkIcon,
   MessageCircle,
   Send,
-  SmilePlus,
 } from "lucide-react";
 import { CampfirePost, PostComment } from "@/types";
 import { CommentsList } from "@/components/common/CommentsList";
+import { ReactionPicker } from "@/components/common/ReactionPicker";
 import { subscribeToPostComments } from "@/lib/firebase/community";
 
 interface CampfirePostCardProps {
@@ -18,7 +18,7 @@ interface CampfirePostCardProps {
   userId?: string;
   showComments: boolean;
   commentInput: string;
-  onLike: (postId: string) => void;
+  onLike: (postId: string, emoji?: string) => void;
   onToggleComments: (postId: string) => void;
   onCommentInputChange: (value: string) => void;
   onComment: (postId: string) => void;
@@ -34,10 +34,10 @@ export function CampfirePostCard({
   onCommentInputChange,
   onComment,
 }: CampfirePostCardProps) {
-  const isLiked = Boolean(userId && post.reactions["❤️"]?.includes(userId));
+  const isLiked = Boolean(userId && post.reactions?.["❤️"]?.includes(userId));
 
   return (
-    <article className="bg-surface rounded-2xl p-gutter card-shadow border border-outline-variant/30 flex flex-col gap-4">
+    <article className="bg-surface rounded-2xl p-gutter card-shadow border border-outline-variant/30 flex flex-col gap-4 relative">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Image src={post.authorAvatar} alt={post.authorName} width={48} height={48} className="w-12 h-12 rounded-full object-cover border border-outline-variant/40" />
@@ -80,12 +80,37 @@ export function CampfirePostCard({
         </a>
       )}
 
+      {/* Active Reactions Pills */}
+      {post.reactions && Object.keys(post.reactions).length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 pt-1">
+          {Object.entries(post.reactions).map(([emoji, userIds]) => {
+            if (!userIds || userIds.length === 0) return null;
+            const hasReacted = Boolean(userId && userIds.includes(userId));
+            return (
+              <button
+                key={emoji}
+                type="button"
+                onClick={() => onLike(post.id, emoji)}
+                className={`px-2.5 py-1 rounded-full font-mono text-xs flex items-center gap-1.5 border transition-all cursor-pointer ${
+                  hasReacted
+                    ? "bg-primary-container/20 border-primary text-primary font-bold shadow-xs"
+                    : "bg-surface-container-low border-outline-variant/30 text-on-surface-variant hover:border-primary/40"
+                }`}
+              >
+                <span>{emoji}</span>
+                <span>{userIds.length}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       <div className="flex items-center justify-between pt-3 border-t border-outline-variant/20 font-mono text-xs text-on-surface-variant">
         <div className="flex items-center gap-6">
           <button
             type="button"
-            onClick={() => onLike(post.id)}
-            className={`flex items-center gap-1.5 transition-colors ${
+            onClick={() => onLike(post.id, "❤️")}
+            className={`flex items-center gap-1.5 transition-colors cursor-pointer ${
               isLiked ? "text-error font-bold" : "hover:text-primary"
             }`}
           >
@@ -95,19 +120,17 @@ export function CampfirePostCard({
           <button
             type="button"
             onClick={() => onToggleComments(post.id)}
-            className="flex items-center gap-1.5 hover:text-primary transition-colors"
+            className="flex items-center gap-1.5 hover:text-primary transition-colors cursor-pointer"
           >
             <MessageCircle className="w-5 h-5" />
             <span>{post.commentsCount} Commentaires</span>
           </button>
         </div>
-        <button
-          type="button"
-          aria-label="Ajouter une réaction"
-          className="text-on-surface-variant hover:text-primary transition-colors"
-        >
-          <SmilePlus className="w-5 h-5" />
-        </button>
+
+        <ReactionPicker
+          onSelectEmoji={(emoji) => onLike(post.id, emoji)}
+          label="😀+ Réagir"
+        />
       </div>
 
       {showComments && (

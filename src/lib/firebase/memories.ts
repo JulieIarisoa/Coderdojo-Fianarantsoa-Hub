@@ -18,7 +18,14 @@ import { db } from "./config";
 import { memorySchema } from "@/lib/validation/schemas";
 
 function handleMemoryError(error: unknown, source: string) {
-  console.error(`[Firestore Error] ${source}:`, error);
+  const code = (error as { code?: string })?.code;
+  if (code === "permission-denied") {
+    console.warn(
+      `[Firestore Permission Warning] ${source}: Insufficient permissions or unauthenticated session.`
+    );
+  } else {
+    console.error(`[Firestore Error] ${source}:`, error);
+  }
 }
 
 export function subscribeToMemories(callback: (memories: MemoryItem[]) => void) {
@@ -81,17 +88,17 @@ export async function createMemory(
   });
 }
 
-export async function toggleLikeMemory(memoryId: string, userId: string) {
+export async function toggleLikeMemory(memoryId: string, userId: string, emoji: string = "❤️") {
   const memoryReference = doc(db, "memories", memoryId);
   const snapshot = await getDoc(memoryReference);
   if (!snapshot.exists()) return;
 
-  const hearts: string[] = snapshot.data().reactions?.["❤️"] || [];
-  const hasLiked = hearts.includes(userId);
+  const usersForEmoji: string[] = snapshot.data().reactions?.[emoji] || [];
+  const hasReacted = usersForEmoji.includes(userId);
 
   await updateDoc(memoryReference, {
-    "reactions.❤️": hasLiked ? arrayRemove(userId) : arrayUnion(userId),
-    likesCount: increment(hasLiked ? -1 : 1),
+    [`reactions.${emoji}`]: hasReacted ? arrayRemove(userId) : arrayUnion(userId),
+    likesCount: increment(hasReacted ? -1 : 1),
   });
 }
 

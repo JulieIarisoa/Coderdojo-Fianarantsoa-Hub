@@ -103,48 +103,58 @@ export default function CampfirePage() {
     reset({ content: "", category: values.category });
   };
 
-  const handleLike = async (postId: string) => {
+  const handleLike = async (postId: string, emoji: string = "❤️") => {
     if (!user) return;
 
+    setPosts((prevPosts) =>
+      prevPosts.map((p) => {
+        if (p.id === postId) {
+          const hasReacted = p.reactions?.[emoji]?.includes(user.id);
+          const newLikes = hasReacted ? Math.max(0, p.likesCount - 1) : p.likesCount + 1;
+          const newReactions = { ...(p.reactions || {}) };
+          newReactions[emoji] = hasReacted
+            ? (newReactions[emoji] || []).filter((id) => id !== user.id)
+            : [...(newReactions[emoji] || []), user.id];
+          return { ...p, likesCount: newLikes, reactions: newReactions };
+        }
+        return p;
+      })
+    );
+
     if (process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
-      await toggleLikeCampfirePost(postId, { id: user.id, name: user.name });
-    } else {
-      setPosts(
-        posts.map((p) => {
-          if (p.id === postId) {
-            const hasLiked = p.reactions["❤️"]?.includes(user.id);
-            const newLikes = hasLiked ? p.likesCount - 1 : p.likesCount + 1;
-            const newReactions = { ...p.reactions };
-            newReactions["❤️"] = hasLiked
-              ? (newReactions["❤️"] || []).filter((id) => id !== user.id)
-              : [...(newReactions["❤️"] || []), user.id];
-            return { ...p, likesCount: newLikes, reactions: newReactions };
-          }
-          return p;
-        })
-      );
+      try {
+        await toggleLikeCampfirePost(postId, { id: user.id, name: user.name }, emoji);
+      } catch (err) {
+        console.warn("Firestore like sync error:", err);
+      }
     }
   };
 
   const handleComment = async (postId: string) => {
     if (!commentInput.trim() || !user) return;
 
-    if (process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
-      await addCommentToCampfirePost(postId, {
-        postId,
-        authorId: user.id,
-        authorName: user.name,
-        authorAvatar: user.avatar,
-        content: commentInput,
-      });
-    } else {
-      setPosts(
-        posts.map((p) =>
-          p.id === postId ? { ...p, commentsCount: p.commentsCount + 1 } : p
-        )
-      );
-    }
+    const currentComment = commentInput;
     setCommentInput("");
+
+    setPosts((prevPosts) =>
+      prevPosts.map((p) =>
+        p.id === postId ? { ...p, commentsCount: p.commentsCount + 1 } : p
+      )
+    );
+
+    if (process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
+      try {
+        await addCommentToCampfirePost(postId, {
+          postId,
+          authorId: user.id,
+          authorName: user.name,
+          authorAvatar: user.avatar,
+          content: currentComment,
+        });
+      } catch (err) {
+        console.warn("Firestore comment sync error:", err);
+      }
+    }
   };
 
   return (

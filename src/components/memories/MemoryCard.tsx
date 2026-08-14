@@ -6,13 +6,15 @@ import { useEffect, useState } from "react";
 import { Heart, Images, MessageCircle, Send, Share2 } from "lucide-react";
 import { MemoryItem, PostComment } from "@/types";
 import { CommentsList } from "@/components/common/CommentsList";
+import { ReactionPicker } from "@/components/common/ReactionPicker";
 import { subscribeToMemoryComments } from "@/lib/firebase/memories";
 
 interface MemoryCardProps {
   memory: MemoryItem;
+  userId?: string;
   commentsOpen: boolean;
   commentInput: string;
-  onLike: (memoryId: string) => void;
+  onLike: (memoryId: string, emoji?: string) => void;
   onToggleComments: (memoryId: string) => void;
   onCommentInputChange: (value: string) => void;
   onComment: (memoryId: string) => void;
@@ -21,6 +23,7 @@ interface MemoryCardProps {
 
 export function MemoryCard({
   memory,
+  userId,
   commentsOpen,
   commentInput,
   onLike,
@@ -30,9 +33,10 @@ export function MemoryCard({
   onShare,
 }: MemoryCardProps) {
   const photoCount = memory.images?.length || (memory.imageUrl ? 1 : 0);
+  const isLiked = Boolean(userId && memory.reactions?.["❤️"]?.includes(userId));
 
   return (
-    <article className="bg-surface rounded-2xl p-5 card-shadow border border-outline-variant/30 flex flex-col justify-between hover:border-primary/40 transition-all group">
+    <article className="bg-surface rounded-2xl p-5 card-shadow border border-outline-variant/30 flex flex-col justify-between hover:border-primary/40 transition-all group relative">
       <Link href={`/memories/${memory.id}`} className="block relative h-48 w-full rounded-xl overflow-hidden mb-4 cursor-pointer">
         <Image src={memory.imageUrl} alt={memory.title} fill sizes="(min-width: 768px) 50vw, 100vw" className="object-cover group-hover:scale-105 transition-transform duration-300" />
         {photoCount > 1 && (
@@ -54,6 +58,31 @@ export function MemoryCard({
         </p>
       </div>
 
+      {/* Active Reactions Pills */}
+      {memory.reactions && Object.keys(memory.reactions).length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 mb-3">
+          {Object.entries(memory.reactions).map(([emoji, userIds]) => {
+            if (!userIds || userIds.length === 0) return null;
+            const hasReacted = Boolean(userId && userIds.includes(userId));
+            return (
+              <button
+                key={emoji}
+                type="button"
+                onClick={() => onLike(memory.id, emoji)}
+                className={`px-2 py-0.5 rounded-full font-mono text-xs flex items-center gap-1 border transition-all cursor-pointer ${
+                  hasReacted
+                    ? "bg-primary-container/20 border-primary text-primary font-bold shadow-xs"
+                    : "bg-surface-container-low border-outline-variant/30 text-on-surface-variant hover:border-primary/40"
+                }`}
+              >
+                <span>{emoji}</span>
+                <span>{userIds.length}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       <div className="flex flex-col gap-3 pt-3 border-t border-outline-variant/20 mt-auto">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -63,27 +92,36 @@ export function MemoryCard({
             </span>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5 font-mono text-xs">
             <button
               type="button"
-              onClick={() => onLike(memory.id)}
-              className="flex items-center gap-1 font-mono text-xs text-on-surface-variant hover:text-primary transition-colors"
+              onClick={() => onLike(memory.id, "❤️")}
+              className={`flex items-center gap-1 transition-colors cursor-pointer ${
+                isLiked ? "text-error font-bold" : "text-on-surface-variant hover:text-primary"
+              }`}
             >
-              <Heart className="w-4 h-4" />
+              <Heart className="w-4 h-4" fill={isLiked ? "currentColor" : "none"} />
               <span>{memory.likesCount}</span>
             </button>
             <button
               type="button"
               onClick={() => onToggleComments(memory.id)}
-              className="flex items-center gap-1 font-mono text-xs text-on-surface-variant hover:text-primary transition-colors"
+              className="flex items-center gap-1 text-on-surface-variant hover:text-primary transition-colors cursor-pointer"
             >
               <MessageCircle className="w-4 h-4" />
               <span>{memory.commentsCount}</span>
             </button>
+
+            <ReactionPicker
+              onSelectEmoji={(emoji) => onLike(memory.id, emoji)}
+              size="sm"
+              label="😀+"
+            />
+
             <button
               type="button"
               onClick={() => onShare(memory.title, memory.description)}
-              className="text-on-surface-variant hover:text-primary transition-colors"
+              className="text-on-surface-variant hover:text-primary transition-colors cursor-pointer"
               aria-label="Partager ce souvenir"
             >
               <Share2 className="w-4 h-4" />
