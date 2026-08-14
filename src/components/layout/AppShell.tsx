@@ -4,6 +4,7 @@ import React from "react";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { BottomNav } from "./BottomNav";
+import { OfflineBanner } from "./OfflineBanner";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
@@ -13,6 +14,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Main Content Stage */}
       <main className="flex-1 w-full lg:ml-60 flex flex-col min-h-screen">
+        <OfflineBanner />
         <TopBar />
         <div className="flex-1 w-full max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop py-gutter pb-32 lg:pb-gutter">
           {children}
