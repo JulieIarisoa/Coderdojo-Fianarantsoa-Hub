@@ -104,7 +104,7 @@ export default function LoginPage() {
         )}
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+        <form onSubmit={handleSubmit} suppressHydrationWarning className="flex flex-col gap-5">
           {/* Email Field */}
           <div>
             <label className="block font-mono text-xs font-semibold uppercase tracking-wider text-on-surface mb-2" htmlFor="email">
@@ -152,6 +152,7 @@ export default function LoginPage() {
           {/* Action Buttons */}
           <div className="flex flex-col gap-4 mt-2">
             <button
+              suppressHydrationWarning
               type="submit"
               disabled={submitting}
               className="w-full flex items-center justify-center py-3.5 px-8 bg-gradient-to-r from-primary to-surface-tint text-white dark:from-primary-container dark:to-inverse-primary dark:hover:from-inverse-primary dark:hover:to-primary-container rounded-lg font-headline text-[18px] leading-tight font-semibold hover:shadow-lg hover:from-surface-tint hover:to-primary transition-all duration-300 transform active:scale-95 disabled:opacity-50"
@@ -168,6 +169,7 @@ export default function LoginPage() {
 
             {/* Google Button */}
             <button
+              suppressHydrationWarning
               type="button"
               onClick={handleGoogleSignIn}
               disabled={submitting}
@@ -184,6 +186,7 @@ export default function LoginPage() {
 
             {/* Quick Demo Access Button */}
             <button
+              suppressHydrationWarning
               type="button"
               onClick={handleDemoAccess}
               className="w-full flex items-center justify-center gap-2 py-3 px-6 bg-surface-container-high hover:bg-surface-container text-primary rounded-lg font-mono text-xs font-bold border border-primary/30 transition-all"
